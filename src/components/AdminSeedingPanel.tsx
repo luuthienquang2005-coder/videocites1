@@ -769,7 +769,24 @@ export default function AdminSeedingPanel({
             </div>
 
             {/* Bottom publish action matching user layout exactly */}
-            <div className="pt-4 flex justify-center">
+            <div className="pt-4 flex items-center justify-center gap-4 flex-wrap">
+              {activeTab === "edit" && selectedVideo && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Bạn có chắc chắn muốn xóa video này khỏi hệ thống CDN?\n\nTiêu đề: ${selectedVideo.title}`)) {
+                      onDeleteVideo(selectedVideo.id);
+                      triggerToast("Đã xóa video thành công!");
+                      setSelectedVideoId(videos[0]?.id || "");
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs tracking-wider uppercase py-3.5 px-8 rounded-full flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-lg active:scale-95 border border-rose-500/20"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Xóa Video Này</span>
+                </button>
+              )}
+
               <button
                 type="submit"
                 className="bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200 font-extrabold text-xs tracking-wider uppercase py-3.5 px-10 rounded-full flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-lg active:scale-95"
@@ -842,18 +859,18 @@ export default function AdminSeedingPanel({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Remove this video from platform CDN?\n\nTitle: ${vid.title}`)) {
+                      if (confirm(`Bạn có chắc chắn muốn xóa video này khỏi hệ thống CDN?\n\nTiêu đề: ${vid.title}`)) {
                         onDeleteVideo(vid.id);
-                        triggerToast("Successfully deleted video.");
+                        triggerToast("Đã xóa video thành công!");
                         if (vid.id === selectedVideoId) {
                           setSelectedVideoId(videos[0]?.id || "");
                         }
                       }
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 dark:text-neutral-500 hover:text-rose-500 rounded-lg hover:bg-rose-500/10 transition-all cursor-pointer"
-                    title="Delete Video"
+                    className="p-2 text-slate-400 dark:text-neutral-500 hover:text-rose-500 rounded-lg hover:bg-rose-500/10 transition-all cursor-pointer shrink-0"
+                    title="Xóa video"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4 text-rose-500/80 group-hover:text-rose-500 transition-colors" />
                   </button>
                 </div>
               );
