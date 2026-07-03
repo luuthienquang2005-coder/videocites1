@@ -155,10 +155,30 @@ export default function App() {
   };
 
   // Update a single video's stats/seedings
-  const handleUpdateVideo = (updatedVideo: Video) => {
-    const updatedList = videos.map((v) => (v.id === updatedVideo.id ? updatedVideo : v));
+  const handleUpdateVideo = (updatedVideo: Video, oldId?: string) => {
+    const searchId = oldId || updatedVideo.id;
+    const updatedList = videos.map((v) => (v.id === searchId ? updatedVideo : v));
     setVideos(updatedList);
     safeStorage.setItem("videocites-videos-db", JSON.stringify(updatedList));
+
+    // If ID changed, migrate comments
+    if (oldId && oldId !== updatedVideo.id) {
+      const updatedComments = { ...comments };
+      if (updatedComments[oldId]) {
+        updatedComments[updatedVideo.id] = updatedComments[oldId];
+        delete updatedComments[oldId];
+        setComments(updatedComments);
+        safeStorage.setItem("videocites-comments-db", JSON.stringify(updatedComments));
+      }
+
+      // If currently selected video ID is oldId, update it and pushState to match
+      if (selectedVideoId === oldId) {
+        setSelectedVideoId(updatedVideo.id);
+        if (currentView === "watch") {
+          navigateTo("watch", updatedVideo.id);
+        }
+      }
+    }
   };
 
   // Add a newly uploaded video into systemic library

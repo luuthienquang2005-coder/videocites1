@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface AdminSeedingPanelProps {
   videos: Video[];
-  onUpdateVideo: (updated: Video) => void;
+  onUpdateVideo: (updated: Video, oldId?: string) => void;
   onAddVideo: (newVideo: Video) => void;
   onDeleteVideo: (id: string) => void;
   onResetDatabase: () => void;
@@ -42,6 +42,7 @@ export default function AdminSeedingPanel({
   const [views, setViews] = useState(350000);
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Cinematic");
+  const [videoSlug, setVideoSlug] = useState("");
 
   // ----------------------------------------------------
   // Initialize/Sync Form State
@@ -60,6 +61,7 @@ export default function AdminSeedingPanel({
     setViews(Math.floor(Math.random() * 450000) + 1200);
     setDescription("Add a descriptive description for this video...");
     setCategory("Cinematic");
+    setVideoSlug("");
   };
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export default function AdminSeedingPanel({
       setViews(selectedVideo.baseViews);
       setDescription(selectedVideo.description || "");
       setCategory(selectedVideo.category || "Cinematic");
+      setVideoSlug(selectedVideo.id);
     }
   }, [activeTab, selectedVideoId, selectedVideo]);
 
@@ -215,6 +218,63 @@ export default function AdminSeedingPanel({
   };
 
   // ----------------------------------------------------
+  // Thumbnail Processing Helpers
+  // ----------------------------------------------------
+  const handleAutoGetThumbnail = () => {
+    if (!videoTitle) {
+      triggerToast("Vui lòng nhập tiêu đề video trước để tự động lấy thumbnail phù hợp!");
+      return;
+    }
+
+    // Try YouTube video ID parsing
+    const ytReg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = videoUrl.match(ytReg);
+    if (match && match[1]) {
+      const ytId = match[1];
+      setThumbnailUrl(`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`);
+      triggerToast("Đã tự động lấy ảnh bìa từ video YouTube!");
+      return;
+    }
+
+    // Unsplash collections based on category
+    let photoId = "1506318137071-a8e063b4bec0"; // space/cinematic default
+    if (category === "Sci-Fi") {
+      const sciFiPics = ["1451187580459-43490279c0fa", "1506703719100-a0f3a48c0f86", "1446776811953-b23d57bd21aa", "1461360370896-922624d12aa1"];
+      photoId = sciFiPics[Math.floor(Math.random() * sciFiPics.length)];
+    } else if (category === "Cinematic") {
+      const cinePics = ["1485846234645-a62644f84728", "1536440136628-849c177e76a1", "1507679799987-c73779587ccf", "1489599849927-2ee91cede3ba"];
+      photoId = cinePics[Math.floor(Math.random() * cinePics.length)];
+    } else if (category === "Animation") {
+      const animPics = ["1534447677768-be436bb09401", "1607604276583-eef5d076aa5f", "1560942485-b2a11cc13456", "1581833971358-2c8b550f87b3"];
+      photoId = animPics[Math.floor(Math.random() * animPics.length)];
+    } else if (category === "Nature") {
+      const naturePics = ["1472214222541-d510753a4907", "1447752875215-b2761acb3c5d", "1470071459604-3b5ec3a7fe05", "1469474968028-56623f02e42e"];
+      photoId = naturePics[Math.floor(Math.random() * naturePics.length)];
+    } else if (category === "Surrealist") {
+      const surPics = ["1518709268805-4e9042af9f23", "1490730141103-6cac27aaab94", "1541701494587-cb58502866ab", "1518531933037-91b2f5f229cc"];
+      photoId = surPics[Math.floor(Math.random() * surPics.length)];
+    }
+
+    const unsplashUrl = `https://images.unsplash.com/photo-${photoId}?q=80&auto=format&fit=crop&w=800`;
+    setThumbnailUrl(unsplashUrl);
+    triggerToast(`Đã tự động lấy ảnh bìa theo chủ đề ${category}!`);
+  };
+
+  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setThumbnailUrl(reader.result);
+          triggerToast("Đã tải lên và áp dụng ảnh bìa video thành công!");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // ----------------------------------------------------
   // Toast notifications State
   // ----------------------------------------------------
   const [successToast, setSuccessToast] = useState("");
@@ -242,9 +302,10 @@ export default function AdminSeedingPanel({
     }
 
     if (activeTab === "add") {
-      const newId = `videocites-${videoTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-4)}`;
+      const generatedId = `videocites-${videoTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now().toString().slice(-4)}`;
+      const finalId = videoSlug.trim() ? videoSlug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-") : generatedId;
       const newVideo: Video = {
-        id: newId,
+        id: finalId,
         title: videoTitle,
         videoUrl: videoUrl,
         thumbnailUrl: finalThumbnail,
@@ -274,8 +335,10 @@ export default function AdminSeedingPanel({
     } else {
       // Edit / Update mode
       if (!selectedVideo) return;
+      const finalId = videoSlug.trim() ? videoSlug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-") : selectedVideo.id;
       const updatedVideo: Video = {
         ...selectedVideo,
+        id: finalId,
         title: videoTitle,
         videoUrl: videoUrl,
         thumbnailUrl: finalThumbnail,
@@ -295,8 +358,9 @@ export default function AdminSeedingPanel({
         description: description
       };
 
-      onUpdateVideo(updatedVideo);
-      triggerToast("Updated video details successfully!");
+      onUpdateVideo(updatedVideo, selectedVideo.id);
+      setSelectedVideoId(finalId);
+      triggerToast("Updated video details and link identifier successfully!");
     }
   };
 
@@ -452,8 +516,9 @@ export default function AdminSeedingPanel({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide">
-                  Video URL
+                <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
+                  <span>Video URL</span>
+                  <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">kiểm tra / nguồn mẫu</span>
                 </label>
                 <input
                   type="text"
@@ -463,7 +528,68 @@ export default function AdminSeedingPanel({
                   className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all font-mono"
                   required
                 />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (videoUrl) {
+                        window.open(videoUrl, "_blank");
+                        triggerToast("Đang mở link video trong tab mới để kiểm tra...");
+                      } else {
+                        triggerToast("Vui lòng nhập URL video trước!");
+                      }
+                    }}
+                    className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Kiểm Tra Link Video</span>
+                  </button>
+                  <div className="relative flex-1">
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setVideoUrl(e.target.value);
+                          triggerToast("Đã chọn nguồn phát mẫu chất lượng cao!");
+                          e.target.value = "";
+                        }
+                      }}
+                      className="w-full h-full py-1.5 pl-3 pr-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer border border-slate-200 dark:border-white/5 appearance-none text-center outline-none"
+                    >
+                      <option value="" className="text-slate-800 dark:text-neutral-300">Chọn URL Mẫu (MP4)</option>
+                      <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4">Subaru Outback (Cinematic)</option>
+                      <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4">Sintel Movie (Animation)</option>
+                      <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">Big Buck Bunny (Nature)</option>
+                      <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4">Tears of Steel (Sci-Fi)</option>
+                      <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4">Elephants Dream (Surrealist)</option>
+                    </select>
+                    <div className="absolute right-3 top-2.5 pointer-events-none text-slate-400 text-[8px]">
+                      ▼
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* CUSTOM VIDEO ID / SLUG (ROUTE LINK IDENTIFIER) */}
+            <div className="space-y-2 p-4 bg-slate-50 dark:bg-[#141414]/30 border border-slate-200 dark:border-white/5 rounded-2xl">
+              <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
+                <span>Mã định danh liên kết (Video ID / Slug)</span>
+                <span className="text-[11px] text-blue-500 dark:text-blue-400 font-mono font-semibold">
+                  ?v={videoSlug || "tu-dong-theo-tieu-de"}
+                </span>
+              </label>
+              <input
+                type="text"
+                value={videoSlug}
+                onChange={(e) => setVideoSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                placeholder={activeTab === "add" ? "Để trống để tự động tạo theo tiêu đề (ví dụ: videocites-ten-video-1234)" : "Nhập mã định danh tùy chỉnh cho liên kết watch..."}
+                className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all font-mono"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-neutral-500 leading-relaxed">
+                Đường dẫn liên kết xem video sẽ là: <code className="text-blue-500 dark:text-blue-400 font-mono font-semibold">
+                  {(typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au")}/?v={videoSlug || "ten-video-cua-ban"}
+                </code>. Sửa phần này sẽ cập nhật ngay lập tức mã định danh của video trên hệ thống và tự động cập nhật/di chuyển toàn bộ bình luận liên quan sang mã mới.
+              </p>
             </div>
 
             {/* ROW 2: Author Name, Category & Thumbnail URL */}
@@ -506,8 +632,9 @@ export default function AdminSeedingPanel({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide">
-                  Thumbnail URL
+                <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
+                  <span>Thumbnail URL</span>
+                  <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">Tự động / Tải lên</span>
                 </label>
                 <input
                   type="text"
@@ -517,6 +644,26 @@ export default function AdminSeedingPanel({
                   className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all font-mono"
                   required
                 />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAutoGetThumbnail}
+                    className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Lấy Tự Động</span>
+                  </button>
+                  <label className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5 text-center">
+                    <UploadCloud className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+                    <span>Tải Lên File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
 

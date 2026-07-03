@@ -131,11 +131,6 @@ export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, the
                 <span className="text-[9px] font-mono text-purple-600 dark:text-purple-400 font-bold uppercase tracking-widest leading-none">
                   ADMIN PORTAL
                 </span>
-                <span className={`text-[10px] font-mono font-bold mt-1 leading-none ${
-                  isLight ? "text-blue-600" : "text-blue-400"
-                }`}>
-                  mnzfrankie@gmail.com
-                </span>
               </div>
               <button
                 onClick={onLogout}
@@ -153,11 +148,6 @@ export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, the
                   isLight ? "text-slate-500" : "text-neutral-400"
                 }`}>
                   SECURE GUEST
-                </span>
-                <span className={`text-[10px] font-mono font-bold mt-1 leading-none ${
-                  isLight ? "text-blue-600" : "text-blue-400"
-                }`}>
-                  mnzfrankie@gmail.com
                 </span>
               </div>
               <button
