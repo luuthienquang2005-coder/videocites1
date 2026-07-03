@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch || globalThis.fetch;
+          if (originalFetch) {
+            var activeFetch = originalFetch;
+            var defineFetchOn = function(obj) {
+              if (!obj) return;
+              try {
+                var desc = Object.getOwnPropertyDescriptor(obj, "fetch");
+                if (!desc || desc.configurable) {
+                  Object.defineProperty(obj, "fetch", {
+                    get: function() { return activeFetch; },
+                    set: function(val) { activeFetch = val; },
+                    configurable: true,
+                    enumerable: true
+                  });
+                }
+              } catch (e) {
+                // Ignore descriptor errors
+              }
+            };
+            defineFetchOn(window);
+            defineFetchOn(globalThis);
+            if (typeof self !== "undefined") defineFetchOn(self);
+            if (typeof Window !== "undefined" && Window.prototype) defineFetchOn(Window.prototype);
+          }
+        } catch (err) {
+          // Silent fallback
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Videocites</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

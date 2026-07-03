@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'JetBrains Mono', monospace;
+}
+
+/* Base silver/dark-mode variables and scrollbars */
+html {
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom display font for headings */
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display), var(--font-sans);
+  letter-spacing: -0.02em;
+}
+
+/* Dynamic theme based on html class */
+html, body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.light, html.light body {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+html.dark, html.dark body, html:not(.light), html:not(.light) body {
+  background-color: #050505 !important;
+  color: #E5E5E5 !important;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Premium micro-inputs & buttons styling */
+input[type="range"] {
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  transition: transform 0.15s ease-in-out;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Vnaoh",
+  "description": "Premium Enterprise Copyright Video Hosting \u0026 Streaming Platform with advanced Admin Seeding control panel",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
