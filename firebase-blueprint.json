@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "Video": {
+      "title": "Video",
+      "description": "Information about a video in the platform CDN.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the video, matching its URL slug."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the video."
+        },
+        "description": {
+          "type": "string",
+          "description": "Markdown description of the video."
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "Direct URL to the video file stored in the CDN."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "Direct URL to the video thumbnail image."
+        },
+        "duration": {
+          "type": "string",
+          "description": "The duration formatted as MM:SS."
+        },
+        "author": {
+          "type": "object",
+          "description": "The author / publisher profile details."
+        },
+        "realViews": {
+          "type": "integer",
+          "description": "Current platform views."
+        },
+        "realLikes": {
+          "type": "integer",
+          "description": "Current platform likes."
+        },
+        "realDislikes": {
+          "type": "integer",
+          "description": "Current platform dislikes."
+        },
+        "baseViews": {
+          "type": "integer",
+          "description": "The base view count used to calculate dynamic views."
+        },
+        "baseLikes": {
+          "type": "integer",
+          "description": "The base like count."
+        },
+        "baseDislikes": {
+          "type": "integer",
+          "description": "The base dislike count."
+        },
+        "publishedAt": {
+          "type": "string",
+          "description": "ISO timestamp representing the publication date."
+        },
+        "category": {
+          "type": "string",
+          "description": "The video genre/category (e.g. Cinematic, Surrealist)."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Associated metadata tags."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "videoUrl",
+        "thumbnailUrl"
+      ]
+    },
+    "VideoCommentList": {
+      "title": "VideoCommentList",
+      "description": "Container for comments associated with a specific video.",
+      "type": "object",
+      "properties": {
+        "comments": {
+          "type": "array",
+          "description": "List of comment objects."
+        }
+      },
+      "required": [
+        "comments"
+      ]
+    }
+  },
+  "firestore": {
+    "/videos/{videoId}": {
+      "schema": "Video",
+      "description": "Collection of all available copyrighted and user-seeded videos."
+    },
+    "/comments/{videoId}": {
+      "schema": "VideoCommentList",
+      "description": "Comments matching a video by its video ID."
+    }
+  }
+}

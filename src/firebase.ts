@@ -26,8 +26,54 @@ export const db = getFirestore(
 
 console.log("Firebase initialized with project:", firebaseConfig.projectId, "and DB:", firebaseConfig.firestoreDatabaseId);
 
+// Error handling helper as mandated by firebase-integration skill
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: null,
+      email: null,
+      emailVerified: null,
+      isAnonymous: null,
+      tenantId: null,
+      providerInfo: []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 // Seeding function: Seeds initial videos and comments if they don't exist yet in Firestore
 export async function seedInitialDataIfNeeded() {
+  const path = "videos";
   try {
     const videosCol = collection(db, "videos");
     const snapshot = await getDocs(videosCol);
@@ -50,7 +96,7 @@ export async function seedInitialDataIfNeeded() {
       console.log("Firestore database already has data, skipping seed.");
     }
   } catch (error) {
-    console.error("Failed to seed initial Firestore data:", error);
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
@@ -67,12 +113,13 @@ export function subscribeToVideos(onUpdate: (videos: Video[]) => void) {
     list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     onUpdate(list);
   }, (error) => {
-    console.error("Firestore subscribeToVideos error:", error);
+    handleFirestoreError(error, OperationType.GET, "videos");
   });
 }
 
 // Subscribe to comments for a specific video in real-time
 export function subscribeToComments(videoId: string, onUpdate: (comments: VideoComment[]) => void) {
+  const commentPath = `comments/${videoId}`;
   const commentDoc = doc(db, "comments", videoId);
   return onSnapshot(commentDoc, (snapshot) => {
     if (snapshot.exists()) {
@@ -82,24 +129,38 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
       onUpdate([]);
     }
   }, (error) => {
-    console.error(`Firestore subscribeToComments error for video ${videoId}:`, error);
+    handleFirestoreError(error, OperationType.GET, commentPath);
   });
 }
 
 // Add or update a video in Firestore
 export async function saveVideoToFirestore(video: Video) {
-  await setDoc(doc(db, "videos", video.id), video);
+  const videoPath = `videos/${video.id}`;
+  try {
+    await setDoc(doc(db, "videos", video.id), video);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, videoPath);
+  }
 }
 
 // Delete a video and its comments from Firestore
 export async function deleteVideoFromFirestore(videoId: string) {
-  await deleteDoc(doc(db, "videos", videoId));
-  await deleteDoc(doc(db, "comments", videoId));
+  try {
+    await deleteDoc(doc(db, "videos", videoId));
+    await deleteDoc(doc(db, "comments", videoId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `videos/${videoId}`);
+  }
 }
 
 // Save comments for a video
 export async function saveCommentsToFirestore(videoId: string, comments: VideoComment[]) {
-  await setDoc(doc(db, "comments", videoId), { comments });
+  const commentPath = `comments/${videoId}`;
+  try {
+    await setDoc(doc(db, "comments", videoId), { comments });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, commentPath);
+  }
 }
 
 // Migrate comments when a video ID is changed
@@ -116,6 +177,6 @@ export async function migrateCommentsInFirestore(oldId: string, newId: string) {
       await deleteDoc(oldCommentDoc);
     }
   } catch (error) {
-    console.error("Failed to migrate comments in Firestore:", error);
+    handleFirestoreError(error, OperationType.WRITE, `comments/${newId}`);
   }
 }
