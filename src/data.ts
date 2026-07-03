@@ -164,10 +164,60 @@ Proog and Emo explore a bizarre giant machine world, which changes shape accordi
     publishedAt: "2026-05-02T11:20:00Z",
     category: "Surrealist",
     tags: ["First", "Surreal", "Mechanical", "Classic", "Steampunk"]
+  },
+  {
+    id: "csgt-bo-qua-xe-qua-kho",
+    title: "CSGT Bỏ Qua Xe Quá Khổ Quá Tải - Phóng Sự Điều Tra Thực Tế",
+    description: `# Phóng Sự Điều Tra: Cảnh Sát Giao Thông Bỏ Qua Xe Quá Khổ Quá Tải
+
+Video ghi lại cận cảnh thực trạng lực lượng tuần tra kiểm soát giao thông có dấu hiệu bỏ qua cho các phương tiện vận tải quá khổ, quá tải lưu thông trên tuyến quốc lộ trọng điểm.
+
+### Chi Tiết Phóng Sự
+- **Địa điểm ghi hình:** Tuyến đường Quốc lộ huyết mạch
+- **Đối tượng kiểm soát:** Xe ben, xe container chở quá tải trọng cho phép
+- **Nội dung chính:** Ghi nhận thực tế quy trình kiểm tra nhanh chóng và những thiếu sót của lực lượng chức năng trong việc xử lý phương tiện vi phạm tải trọng.
+
+*Nội dung thuộc quyền phân phối và phát sóng độc quyền trên nền tảng bảo mật Videocites DRM.*`,
+    videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+    thumbnailUrl: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80",
+    duration: "08:32",
+    author: {
+      name: "VTV Phóng Sự Điều Tra",
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=120&q=80",
+      subscribers: 4200000,
+      verified: true
+    },
+    realViews: 4520,
+    realLikes: 340,
+    realDislikes: 2,
+    baseViews: 1200000,
+    baseLikes: 88000,
+    baseDislikes: 1450,
+    publishedAt: "2026-06-30T09:00:00Z",
+    category: "Cinematic",
+    tags: ["CSGT", "Quá khổ quá tải", "Phóng sự", "Giao thông"]
   }
 ];
 
 export const MOCK_COMMENTS: Record<string, VideoComment[]> = {
+  "csgt-bo-qua-xe-qua-kho": [
+    {
+      id: "cc1",
+      authorName: "Nguyễn Văn Hùng",
+      authorAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80",
+      content: "Phóng sự làm quá chân thực và chi tiết! Xe quá tải phá nát hết đường xá mà xử lý hời hợt quá.",
+      createdAt: "2026-06-30T10:15:00Z",
+      likes: 520
+    },
+    {
+      id: "cc2",
+      authorName: "Trần Thị Lan",
+      authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
+      content: "Cảm ơn các nhà báo đã dũng cảm ghi hình thực tế này. Hy vọng các cơ quan ban ngành vào cuộc xử lý triệt để.",
+      createdAt: "2026-06-30T11:45:00Z",
+      likes: 230
+    }
+  ],
   "videocites-sintel-cinematic": [
     {
       id: "c1",

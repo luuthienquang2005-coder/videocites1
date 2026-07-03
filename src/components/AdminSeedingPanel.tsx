@@ -26,6 +26,7 @@ export default function AdminSeedingPanel({
   const [activeTab, setActiveTab] = useState<"add" | "edit">("add");
   const [selectedVideoId, setSelectedVideoId] = useState<string>(videos[0]?.id || "");
   const selectedVideo = videos.find(v => v.id === selectedVideoId) || videos[0];
+  const [justPublishedVideo, setJustPublishedVideo] = useState<{ id: string; title: string } | null>(null);
 
   // ----------------------------------------------------
   // Form fields state
@@ -65,6 +66,7 @@ export default function AdminSeedingPanel({
   };
 
   useEffect(() => {
+    setJustPublishedVideo(null);
     if (activeTab === "add") {
       setAddDefaults();
     } else if (activeTab === "edit" && selectedVideo) {
@@ -330,6 +332,7 @@ export default function AdminSeedingPanel({
       };
 
       onAddVideo(newVideo);
+      setJustPublishedVideo({ id: finalId, title: videoTitle });
       triggerToast("Published new copyrighted video successfully!");
       setAddDefaults();
     } else {
@@ -360,6 +363,7 @@ export default function AdminSeedingPanel({
 
       onUpdateVideo(updatedVideo, selectedVideo.id);
       setSelectedVideoId(finalId);
+      setJustPublishedVideo({ id: finalId, title: videoTitle });
       triggerToast("Updated video details and link identifier successfully!");
     }
   };
@@ -416,6 +420,64 @@ export default function AdminSeedingPanel({
             </button>
           </div>
         </div>
+
+        {/* Success watch-link banner */}
+        {justPublishedVideo && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-4xl mx-auto p-6 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/20 dark:border-emerald-400/20 rounded-3xl space-y-4"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-500">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1 min-w-0 flex-grow">
+                <h4 className="text-sm font-black text-slate-800 dark:text-white animate-pulse">
+                  Xuất bản &amp; Cấu hình Mã liên kết thành công!
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-neutral-400">
+                  Video "<span className="font-bold text-slate-700 dark:text-neutral-200">{justPublishedVideo.title}</span>" đã có sẵn để xem trên hệ thống bảo mật DRM.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3 justify-between">
+              <div className="min-w-0 flex-grow">
+                <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest block mb-1">
+                  ĐƯỜNG DẪN XEM VIDEO CHÍNH THỨC
+                </span>
+                <code className="text-xs font-mono font-bold text-blue-500 dark:text-blue-400 break-all select-all">
+                  {typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/?v={justPublishedVideo.id}
+                </code>
+              </div>
+
+              <div className="flex gap-2 w-full sm:w-auto shrink-0 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/?v=${justPublishedVideo.id}`;
+                    navigator.clipboard.writeText(url);
+                    triggerToast("Đã sao chép liên kết vào bộ nhớ tạm!");
+                  }}
+                  className="px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200/50 dark:border-white/5 active:scale-95"
+                >
+                  Sao chép
+                </button>
+                <a
+                  href={`/?v=${justPublishedVideo.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = `/?v=${justPublishedVideo.id}`;
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-95"
+                >
+                  Xem ngay <Eye className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Interactive Drag & Drop Area for Fast CDN Upload (Shown in Add Tab) */}
         {activeTab === "add" && (

@@ -15,6 +15,7 @@ interface VideoWatchPageProps {
   onSelectVideo: (id: string) => void;
   onLikeVideo: (id: string) => void;
   onDislikeVideo: (id: string) => void;
+  onAddComment?: (videoId: string, comment: any) => void;
 }
 
 export default function VideoWatchPage({
@@ -23,7 +24,8 @@ export default function VideoWatchPage({
   comments,
   onSelectVideo,
   onLikeVideo,
-  onDislikeVideo
+  onDislikeVideo,
+  onAddComment
 }: VideoWatchPageProps) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -75,7 +77,11 @@ export default function VideoWatchPage({
       likes: 0
     };
 
-    setLocalComments([newComment, ...localComments]);
+    if (onAddComment) {
+      onAddComment(video.id, newComment);
+    } else {
+      setLocalComments([newComment, ...localComments]);
+    }
     setUserComment("");
   };
 

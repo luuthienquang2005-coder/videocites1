@@ -11,6 +11,15 @@ import MegaFooter from "./components/MegaFooter";
 import AdminLogin from "./components/AdminLogin";
 import VideosPage from "./components/VideosPage";
 import { safeStorage } from "./utils/safeStorage";
+import { 
+  seedInitialDataIfNeeded, 
+  subscribeToVideos, 
+  subscribeToComments, 
+  saveVideoToFirestore, 
+  deleteVideoFromFirestore, 
+  saveCommentsToFirestore,
+  migrateCommentsInFirestore
+} from "./firebase";
 
 export default function App() {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -99,54 +108,42 @@ export default function App() {
     }
   };
 
-  // Initialize application states with safeStorage persistence
+  // Initialize application states with real-time Firestore synchronization
   useEffect(() => {
-    const storedVideos = safeStorage.getItem("videocites-videos-db");
-    const storedComments = safeStorage.getItem("videocites-comments-db");
-    const currentDbVersion = safeStorage.getItem("videocites-db-version");
+    // Seed initial values in Firestore if database is empty
+    seedInitialDataIfNeeded();
 
-    let loadedVideos = null;
-    let loadedComments = null;
+    // Subscribe to all videos dynamically in real-time
+    const unsubscribe = subscribeToVideos((fetchedVideos) => {
+      setVideos(fetchedVideos);
 
-    try {
-      if (storedVideos && currentDbVersion === "v3") {
-        loadedVideos = JSON.parse(storedVideos);
+      // Set default selected video if not specified in URL or not loaded yet
+      const params = new URLSearchParams(window.location.search);
+      const urlVideoId = params.get("v");
+      if (urlVideoId) {
+        setSelectedVideoId(urlVideoId);
+      } else if (fetchedVideos.length > 0) {
+        // Only set default if selectedVideoId is currently empty
+        setSelectedVideoId((prev) => prev || fetchedVideos[0].id);
       }
-    } catch (e) {
-      console.error("Error parsing stored videos:", e);
-    }
+    });
 
-    try {
-      if (storedComments && currentDbVersion === "v3") {
-        loadedComments = JSON.parse(storedComments);
-      }
-    } catch (e) {
-      console.error("Error parsing stored comments:", e);
-    }
-
-    if (loadedVideos) {
-      setVideos(loadedVideos);
-    } else {
-      setVideos(INITIAL_VIDEOS);
-      safeStorage.setItem("videocites-videos-db", JSON.stringify(INITIAL_VIDEOS));
-      safeStorage.setItem("videocites-db-version", "v3");
-    }
-
-    if (loadedComments) {
-      setComments(loadedComments);
-    } else {
-      setComments(MOCK_COMMENTS);
-      safeStorage.setItem("videocites-comments-db", JSON.stringify(MOCK_COMMENTS));
-    }
-
-    // Set default selected video if not specified in URL
-    const params = new URLSearchParams(window.location.search);
-    const urlVideoId = params.get("v");
-    if (!urlVideoId) {
-      const defaultId = INITIAL_VIDEOS[0]?.id || "";
-      setSelectedVideoId(defaultId);
-    }
+    return () => unsubscribe();
   }, []);
+
+  // Listen to comments for the currently active selected video in real-time
+  useEffect(() => {
+    if (!selectedVideoId) return;
+
+    const unsubscribe = subscribeToComments(selectedVideoId, (fetchedComments) => {
+      setComments((prev) => ({
+        ...prev,
+        [selectedVideoId]: fetchedComments,
+      }));
+    });
+
+    return () => unsubscribe();
+  }, [selectedVideoId]);
 
   const handleLogout = () => {
     setIsAdmin(false);
@@ -154,61 +151,76 @@ export default function App() {
     navigateTo("home");
   };
 
-  // Update a single video's stats/seedings
-  const handleUpdateVideo = (updatedVideo: Video, oldId?: string) => {
-    const searchId = oldId || updatedVideo.id;
-    const updatedList = videos.map((v) => (v.id === searchId ? updatedVideo : v));
-    setVideos(updatedList);
-    safeStorage.setItem("videocites-videos-db", JSON.stringify(updatedList));
+  // Update a single video's stats/seedings inside Firestore database
+  const handleUpdateVideo = async (updatedVideo: Video, oldId?: string) => {
+    try {
+      if (oldId && oldId !== updatedVideo.id) {
+        // Delete old video, save updated video
+        await deleteVideoFromFirestore(oldId);
+        await saveVideoToFirestore(updatedVideo);
+        // Migrate comments to new video ID in Firestore
+        await migrateCommentsInFirestore(oldId, updatedVideo.id);
 
-    // If ID changed, migrate comments
-    if (oldId && oldId !== updatedVideo.id) {
-      const updatedComments = { ...comments };
-      if (updatedComments[oldId]) {
-        updatedComments[updatedVideo.id] = updatedComments[oldId];
-        delete updatedComments[oldId];
-        setComments(updatedComments);
-        safeStorage.setItem("videocites-comments-db", JSON.stringify(updatedComments));
-      }
-
-      // If currently selected video ID is oldId, update it and pushState to match
-      if (selectedVideoId === oldId) {
-        setSelectedVideoId(updatedVideo.id);
-        if (currentView === "watch") {
-          navigateTo("watch", updatedVideo.id);
+        if (selectedVideoId === oldId) {
+          setSelectedVideoId(updatedVideo.id);
+          if (currentView === "watch") {
+            navigateTo("watch", updatedVideo.id);
+          }
         }
+      } else {
+        await saveVideoToFirestore(updatedVideo);
       }
+    } catch (e) {
+      console.error("Failed to update video in Firestore:", e);
     }
   };
 
   // Add a newly uploaded video into systemic library
-  const handleAddVideo = (newVideo: Video) => {
-    const updatedList = [newVideo, ...videos];
-    setVideos(updatedList);
-    safeStorage.setItem("videocites-videos-db", JSON.stringify(updatedList));
-
-    // Initialize comments empty array for new video
-    const updatedComments = { ...comments, [newVideo.id]: [] };
-    setComments(updatedComments);
-    safeStorage.setItem("videocites-comments-db", JSON.stringify(updatedComments));
+  const handleAddVideo = async (newVideo: Video) => {
+    try {
+      await saveVideoToFirestore(newVideo);
+      await saveCommentsToFirestore(newVideo.id, []);
+    } catch (e) {
+      console.error("Failed to add video to Firestore:", e);
+    }
   };
 
-  // Delete a video
-  const handleDeleteVideo = (id: string) => {
-    const updatedList = videos.filter((v) => v.id !== id);
-    setVideos(updatedList);
-    safeStorage.setItem("videocites-videos-db", JSON.stringify(updatedList));
+  // Delete a video from Firestore
+  const handleDeleteVideo = async (id: string) => {
+    try {
+      await deleteVideoFromFirestore(id);
+    } catch (e) {
+      console.error("Failed to delete video from Firestore:", e);
+    }
   };
 
-  // Reset entire database to default seeding values
-  const handleResetDatabase = () => {
-    setVideos(INITIAL_VIDEOS);
-    setComments(MOCK_COMMENTS);
-    safeStorage.setItem("videocites-videos-db", JSON.stringify(INITIAL_VIDEOS));
-    safeStorage.setItem("videocites-comments-db", JSON.stringify(MOCK_COMMENTS));
-    const defaultId = INITIAL_VIDEOS[0]?.id || "";
-    setSelectedVideoId(defaultId);
-    navigateTo("admin");
+  // Reset entire database to default seeding values in Firestore
+  const handleResetDatabase = async () => {
+    try {
+      // Re-seed initial data
+      for (const video of INITIAL_VIDEOS) {
+        await saveVideoToFirestore(video);
+      }
+      for (const [videoId, commentList] of Object.entries(MOCK_COMMENTS)) {
+        await saveCommentsToFirestore(videoId, commentList);
+      }
+      const defaultId = INITIAL_VIDEOS[0]?.id || "";
+      setSelectedVideoId(defaultId);
+      navigateTo("admin");
+    } catch (e) {
+      console.error("Failed to reset Firestore database:", e);
+    }
+  };
+
+  // Add comment dynamically to Firestore database
+  const handleAddComment = async (videoId: string, newComment: VideoComment) => {
+    try {
+      const currentComments = comments[videoId] || [];
+      const updatedComments = [newComment, ...currentComments];
+      await saveCommentsToFirestore(videoId, updatedComments);
+    } catch (e) {
+      console.error("Failed to post comment to Firestore:", e);
+    }
   };
 
   // Increment real views when selecting video
@@ -221,7 +233,7 @@ export default function App() {
     if (target) {
       const updated: Video = {
         ...target,
-        realViews: target.realViews + 1
+        realViews: target.realViews + 1,
       };
       handleUpdateVideo(updated);
     }
@@ -233,7 +245,7 @@ export default function App() {
     if (target) {
       const updated: Video = {
         ...target,
-        realLikes: target.realLikes + 1
+        realLikes: target.realLikes + 1,
       };
       handleUpdateVideo(updated);
     }
@@ -245,7 +257,7 @@ export default function App() {
     if (target) {
       const updated: Video = {
         ...target,
-        realDislikes: target.realDislikes + 1
+        realDislikes: target.realDislikes + 1,
       };
       handleUpdateVideo(updated);
     }
@@ -296,6 +308,7 @@ export default function App() {
             onSelectVideo={handleSelectVideo}
             onLikeVideo={handleLikeVideo}
             onDislikeVideo={handleDislikeVideo}
+            onAddComment={handleAddComment}
           />
         )}
 
