@@ -17,15 +17,23 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [bufferedEnd, setBufferedEnd] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem("videocites-volume");
+      return saved ? parseFloat(saved) : 0.8;
+    } catch {
+      return 0.8;
+    }
+  });
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isRightClickWarning, setIsRightClickWarning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Watermark position shift to simulate anti-camtracing
   const [watermarkPos, setWatermarkPos] = useState({ top: "20%", left: "15%" });
@@ -80,9 +88,18 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
     }
   };
 
+  const handleProgress = () => {
+    if (videoRef.current && videoRef.current.buffered.length > 0) {
+      const lastBufferedIndex = videoRef.current.buffered.length - 1;
+      const end = videoRef.current.buffered.end(lastBufferedIndex);
+      setBufferedEnd(end);
+    }
+  };
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       setCurrentTime(videoRef.current.currentTime);
+      handleProgress();
     }
   };
 
@@ -104,6 +121,9 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
     setVolume(newVolume);
+    try {
+      localStorage.setItem("videocites-volume", String(newVolume));
+    } catch {}
     if (videoRef.current) {
       videoRef.current.volume = newVolume;
       videoRef.current.muted = newVolume === 0;
@@ -132,6 +152,85 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
         .catch(err => console.error("Error exiting fullscreen:", err));
     }
   };
+
+  // Keyboard shortcut keys for standard premium controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Avoid firing events if user is currently typing in input field or text area (e.g. searching/commenting)
+      const tagName = document.activeElement?.tagName;
+      if (tagName === "INPUT" || tagName === "TEXTAREA" || document.activeElement?.getAttribute("contenteditable") === "true") {
+        return;
+      }
+
+      if (!videoRef.current) return;
+
+      switch (e.key.toLowerCase()) {
+        case " ":
+        case "k":
+          e.preventDefault();
+          handlePlayPause();
+          break;
+        case "j":
+        case "arrowleft":
+          e.preventDefault();
+          videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+          break;
+        case "l":
+        case "arrowright":
+          e.preventDefault();
+          videoRef.current.currentTime = Math.min(duration || videoRef.current.duration, videoRef.current.currentTime + 10);
+          break;
+        case "arrowup":
+          e.preventDefault();
+          const nextVolUp = Math.min(1, volume + 0.1);
+          setVolume(nextVolUp);
+          videoRef.current.volume = nextVolUp;
+          videoRef.current.muted = false;
+          setIsMuted(false);
+          try {
+            localStorage.setItem("videocites-volume", String(nextVolUp));
+          } catch {}
+          break;
+        case "arrowdown":
+          e.preventDefault();
+          const nextVolDown = Math.max(0, volume - 0.1);
+          setVolume(nextVolDown);
+          videoRef.current.volume = nextVolDown;
+          if (nextVolDown === 0) {
+            setIsMuted(true);
+            videoRef.current.muted = true;
+          } else {
+            setIsMuted(false);
+            videoRef.current.muted = false;
+          }
+          try {
+            localStorage.setItem("videocites-volume", String(nextVolDown));
+          } catch {}
+          break;
+        case "f":
+          e.preventDefault();
+          handleFullscreenToggle();
+          break;
+        case "m":
+          e.preventDefault();
+          handleMuteToggle();
+          break;
+        case "escape":
+          if (document.fullscreenElement) {
+            e.preventDefault();
+            document.exitFullscreen()
+              .then(() => setIsFullscreen(false))
+              .catch(err => console.error("Error exiting fullscreen:", err));
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying, volume, duration, isMuted]);
 
   // Sync state on document-level fullscreen change
   useEffect(() => {
@@ -206,9 +305,12 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onClick={handlePlayPause}
-        onWaiting={() => isPlaying && setIsLoading(true)}
+        onWaiting={() => setIsLoading(true)}
         onPlaying={() => setIsLoading(false)}
         onCanPlay={() => setIsLoading(false)}
+        onCanPlayThrough={() => setIsLoading(false)}
+        onLoadStart={() => setIsLoading(true)}
+        onProgress={handleProgress}
         preload="auto"
         className="w-full h-full object-contain cursor-pointer"
         playsInline
@@ -285,9 +387,15 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
             {/* Seek bar */}
             <div className="relative w-full flex items-center group/seek">
               {/* Virtual custom track layer for nice styling */}
-              <div className="absolute left-0 right-0 h-1 bg-white/25 rounded-full overflow-hidden pointer-events-none">
+              <div className="absolute left-0 right-0 h-1 bg-white/10 rounded-full overflow-hidden pointer-events-none">
+                {/* Buffered track */}
                 <div 
-                  className="h-full bg-blue-500 rounded-full"
+                  className="absolute left-0 top-0 h-full bg-white/20 transition-all duration-150"
+                  style={{ width: `${duration > 0 ? (bufferedEnd / duration) * 100 : 0}%` }}
+                />
+                {/* Playing track */}
+                <div 
+                  className="absolute left-0 top-0 h-full bg-blue-500 rounded-full"
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
