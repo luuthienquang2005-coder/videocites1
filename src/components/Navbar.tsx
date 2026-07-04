@@ -1,5 +1,6 @@
 import React from "react";
 import { Sparkles, Compass, ShieldAlert, Award, MessageSquare, ShieldCheck, Lock, Unlock, LogOut, Sun, Moon, Film } from "lucide-react";
+import Logo from "./Logo";
 
 interface NavbarProps {
   currentView: string;
@@ -24,11 +25,9 @@ export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, the
         {/* Left Brand Area */}
         <div 
           onClick={() => onNavigate("home")}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          className="flex items-center gap-2 cursor-pointer group"
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-sm tracking-tight shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
-            V
-          </div>
+          <Logo className="w-9 h-9 group-hover:scale-105 transition-transform duration-300" />
           <div>
             <span className={`text-base font-black tracking-tighter transition-colors ${
               isLight ? "text-slate-900" : "text-white"

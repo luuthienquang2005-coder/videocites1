@@ -4,6 +4,7 @@ import {
   RotateCcw, ShieldAlert, Settings, SquareStack, Check, Tv
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import Logo from "./Logo";
 
 interface VideoPlayerProps {
   src: string;
@@ -358,6 +359,14 @@ export default function VideoPlayer({
       {/* Alternate floating watermark for screen edge safety */}
       <div className="absolute top-4 right-4 pointer-events-none text-[10px] text-white opacity-5 font-mono select-none z-10 tracking-widest">
         ENCRYPTED FEED: {viewerId}
+      </div>
+
+      {/* YouTube-style brand watermark in bottom-right corner */}
+      <div className="absolute bottom-16 right-4 md:bottom-20 md:right-6 pointer-events-none select-none z-10 flex flex-col items-center gap-1 opacity-25 md:opacity-35 group-hover:opacity-65 transition-opacity duration-300">
+        <Logo className="w-10 h-10 md:w-12 md:h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" watermark={true} />
+        <span className="text-[7px] md:text-[8px] font-mono tracking-widest text-white/70 font-bold uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+          SECURE STREAM
+        </span>
       </div>
 
       {/* Right-click protection notification banner */}

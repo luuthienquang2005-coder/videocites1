@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sun, Moon, Sparkles, ShieldCheck, Mail, MapPin, Globe } from "lucide-react";
+import Logo from "./Logo";
 
 interface MegaFooterProps {
   onNavigate?: (view: string) => void;
@@ -29,9 +30,7 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
           isLight ? "border-slate-200" : "border-neutral-800 dark:border-neutral-900/80"
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white font-bold text-lg shadow-xl tracking-tight">
-              V
-            </div>
+            <Logo className="w-10 h-10" />
             <div>
               <span className={`text-xl font-bold tracking-wider transition-colors duration-300 ${
                 isLight ? "text-slate-900" : "text-white dark:text-white"
