@@ -47,7 +47,7 @@ export default function ContactPage() {
                 <MapPin className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <div>
                   <h4 className="text-xs font-bold uppercase font-mono text-slate-900 dark:text-white">Corporate Headquarters</h4>
-                  <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">728 Silicon Valley, CA, USA.</p>
+                  <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">1583 Old Tenterfield Road, Six Mile Swamp NSW 2469, Australia</p>
                 </div>
               </div>
 
@@ -55,7 +55,7 @@ export default function ContactPage() {
                 <Mail className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <div>
                   <h4 className="text-xs font-bold uppercase font-mono text-slate-900 dark:text-white">Support Mailbox</h4>
-                  <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">support@videocites.com</p>
+                  <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">support@videocites.com.au</p>
                 </div>
               </div>
 

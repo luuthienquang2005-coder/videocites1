@@ -28,7 +28,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.has("v")) return "watch";
+      if (window.location.pathname.startsWith("/watch") || params.has("v")) return "watch";
       if (window.location.pathname === "/login" || params.get("page") === "login") return "login";
       return params.get("page") || "home";
     }
@@ -74,9 +74,11 @@ export default function App() {
       
       if (window.location.pathname === "/login") {
         setCurrentView("login");
-      } else if (videoId) {
+      } else if (window.location.pathname.startsWith("/watch") || videoId) {
         setCurrentView("watch");
-        setSelectedVideoId(videoId);
+        if (videoId) {
+          setSelectedVideoId(videoId);
+        }
       } else if (page) {
         setCurrentView(page);
       } else {
@@ -96,18 +98,18 @@ export default function App() {
     }
     
     if (typeof window !== "undefined") {
-      let newUrl = window.location.pathname;
+      let newUrl = "/";
       const params = new URLSearchParams();
       
       if (view === "watch") {
         const vid = videoId || selectedVideoId || "videocites-sintel-cinematic";
         params.set("v", vid);
-        newUrl = `${window.location.pathname}?${params.toString()}`;
+        newUrl = `/watch?${params.toString()}`;
       } else if (view === "login") {
         newUrl = "/login";
       } else if (view !== "home") {
         params.set("page", view);
-        newUrl = `${window.location.pathname}?${params.toString()}`;
+        newUrl = `/?${params.toString()}`;
       } else {
         newUrl = "/";
       }

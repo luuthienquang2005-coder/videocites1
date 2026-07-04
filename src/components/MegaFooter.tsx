@@ -151,13 +151,13 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
               <li className={`flex items-start gap-2.5 ${isLight ? "text-slate-700" : "text-neutral-400 dark:text-neutral-400"}`}>
                 <MapPin className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                 <span>
-                  728 Silicon Valley, High-Tech Complex, San Jose City, California, USA.
+                  1583 Old Tenterfield Road, Six Mile Swamp NSW 2469, Australia
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-blue-500 shrink-0" />
-                <a href="mailto:support@videocites.com" className={`hover:text-blue-500 transition-colors ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-400"}`}>
-                  support@videocites.com
+                <a href="mailto:support@videocites.com.au" className={`hover:text-blue-500 transition-colors ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-400"}`}>
+                  support@videocites.com.au
                 </a>
               </li>
               <li className={`flex items-center gap-2.5 ${isLight ? "text-slate-700" : "text-neutral-400 dark:text-neutral-400"}`}>

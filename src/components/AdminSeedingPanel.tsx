@@ -458,7 +458,7 @@ export default function AdminSeedingPanel({
                   OFFICIAL WATCH LINK
                 </span>
                 <code className="text-xs font-mono font-bold text-blue-500 dark:text-blue-400 break-all select-all">
-                  {typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/?v={justPublishedVideo.id}
+                  {typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/watch?v={justPublishedVideo.id}
                 </code>
               </div>
 
@@ -466,7 +466,7 @@ export default function AdminSeedingPanel({
                 <button
                   type="button"
                   onClick={() => {
-                    const url = `${typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/?v=${justPublishedVideo.id}`;
+                    const url = `${typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/watch?v=${justPublishedVideo.id}`;
                     navigator.clipboard.writeText(url);
                     triggerToast("Copied link to clipboard!");
                   }}
@@ -475,10 +475,10 @@ export default function AdminSeedingPanel({
                   Copy Link
                 </button>
                 <a
-                  href={`/?v=${justPublishedVideo.id}`}
+                  href={`/watch?v=${justPublishedVideo.id}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    window.location.href = `/?v=${justPublishedVideo.id}`;
+                    window.location.href = `/watch?v=${justPublishedVideo.id}`;
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md active:scale-95"
                 >
@@ -647,7 +647,7 @@ export default function AdminSeedingPanel({
               <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
                 <span>Watch Link Identifier (Video ID / Slug)</span>
                 <span className="text-[11px] text-blue-500 dark:text-blue-400 font-mono font-semibold">
-                  ?v={videoSlug || "auto-from-title"}
+                  /watch?v={videoSlug || "auto-from-title"}
                 </span>
               </label>
               <input
@@ -659,7 +659,7 @@ export default function AdminSeedingPanel({
               />
               <p className="text-[10px] text-slate-400 dark:text-neutral-500 leading-relaxed">
                 The watch link route will be: <code className="text-blue-500 dark:text-blue-400 font-mono font-semibold">
-                  {(typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au")}/?v={videoSlug || "your-video-slug"}
+                  {(typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au")}/watch?v={videoSlug || "your-video-slug"}
                 </code>. Modifying this will immediately update the video's identifier across the DRM system and seamlessly migrate all associated comments to the new identifier.
               </p>
             </div>

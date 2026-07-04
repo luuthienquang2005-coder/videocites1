@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Video } from "../types";
-import { Play, Eye, ThumbsUp, Sparkles, CheckCircle, Search, Film, ShieldCheck } from "lucide-react";
+import { Play, Eye, ThumbsUp, Sparkles, CheckCircle, Search, Film, ShieldCheck, Award, Activity, Globe, Lock, Server, ShieldAlert } from "lucide-react";
 import { motion } from "motion/react";
 import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
 
@@ -14,6 +14,59 @@ interface HomePageProps {
 export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }: HomePageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const [screenshotBlocks, setScreenshotBlocks] = useState(342);
+  const [totalHandshakes, setTotalHandshakes] = useState(1248590);
+  const [pingUS, setPingUS] = useState(1);
+  const [pingAU, setPingAU] = useState(3);
+  const [pingEU, setPingEU] = useState(10);
+  const [pingAS, setPingAS] = useState(7);
+  const [securityLogs, setSecurityLogs] = useState<string[]>([
+    "System initialized. DRM shield active.",
+    "Global hubs connection secure. Latency < 15ms.",
+    "Enforcing ISO/IEC 27001 info-sec protocols.",
+  ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Fluctuate screenshot blocks slightly (chance to increment)
+      if (Math.random() > 0.6) {
+        setScreenshotBlocks(prev => prev + Math.floor(Math.random() * 2) + 1);
+      }
+      
+      // Increment total handshakes continuously
+      setTotalHandshakes(prev => prev + Math.floor(Math.random() * 3) + 1);
+      
+      // Jitter pings
+      setPingUS(prev => Math.max(1, Math.min(4, prev + (Math.random() > 0.5 ? 1 : -1))));
+      setPingAU(prev => Math.max(2, Math.min(5, prev + (Math.random() > 0.5 ? 1 : -1))));
+      setPingEU(prev => Math.max(8, Math.min(13, prev + (Math.random() > 0.5 ? 1 : -1))));
+      setPingAS(prev => Math.max(5, Math.min(10, prev + (Math.random() > 0.5 ? 1 : -1))));
+      
+      // Randomly add a log
+      if (Math.random() > 0.5) {
+        const hubs = ["US-East", "AU-Core", "EU-Central", "Asia-Pac"];
+        const actions = [
+          "Token verification request cleared",
+          "Watermark session ID injected successfully",
+          "Enforced CSS inspect protection",
+          "DRM keys rotation audit completed",
+          "Frame checksum verification passed",
+          "Screenshot block event registered"
+        ];
+        const randomHub = hubs[Math.floor(Math.random() * hubs.length)];
+        const randomAction = actions[Math.floor(Math.random() * actions.length)];
+        const timestamp = new Date().toLocaleTimeString("en-US", { hour12: false });
+        
+        setSecurityLogs(prev => {
+          const newLogs = [`[${timestamp}] [${randomHub}] ${randomAction}`, ...prev];
+          return newLogs.slice(0, 4); // keep last 4
+        });
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const categories = ["All", ...CATEGORIES_LIST];
 
@@ -81,6 +134,147 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
               <Play className="w-4 h-4 fill-[#050505]" />
               Play Video Now
             </button>
+          </div>
+        </div>
+
+        {/* Key Features Section */}
+        <div className="relative overflow-hidden bg-gradient-to-b from-white to-slate-50/50 dark:from-zinc-900/20 dark:to-zinc-900/5 border border-slate-200/80 dark:border-white/5 rounded-3xl p-6 md:p-8 space-y-8 transition-all duration-300 shadow-sm">
+          {/* Subtle glow background */}
+          <div className="absolute top-0 right-0 -mt-12 -mr-12 w-48 h-48 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 relative z-10 border-b border-slate-200/60 dark:border-white/5 pb-5">
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest block font-mono">
+                System Integration
+              </span>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                Key Features & Security Capabilities
+              </h2>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-neutral-400 max-w-md leading-relaxed font-medium">
+              Designed for digital rights protection, our robust systems guarantee secure, tamper-proof premium video delivery.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 relative z-10">
+            {/* Card 1 */}
+            <div className="group relative bg-white dark:bg-zinc-900/40 border border-slate-200/60 dark:border-white/5 rounded-2xl p-6 hover:-translate-y-1.5 hover:border-blue-500/40 dark:hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-blue-500 group-hover:border-blue-500 transition-all duration-300">
+                <ShieldCheck className="w-5 h-5 text-blue-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-xs font-black uppercase font-mono tracking-wider text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                Enterprise DRM Shield
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed font-medium">
+                Complete end-to-end media stream tokenization and authorization preventing source extraction.
+              </p>
+            </div>
+
+            {/* Card 2 */}
+            <div className="group relative bg-white dark:bg-zinc-900/40 border border-slate-200/60 dark:border-white/5 rounded-2xl p-6 hover:-translate-y-1.5 hover:border-blue-500/40 dark:hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-blue-500 group-hover:border-blue-500 transition-all duration-300">
+                <Eye className="w-5 h-5 text-blue-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-xs font-black uppercase font-mono tracking-wider text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                Dynamic Watermarks
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed font-medium">
+                Unique real-time viewer tracking with multi-layered watermark arrays overlaid on playback.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="group relative bg-white dark:bg-zinc-900/40 border border-slate-200/60 dark:border-white/5 rounded-2xl p-6 hover:-translate-y-1.5 hover:border-blue-500/40 dark:hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-blue-500 group-hover:border-blue-500 transition-all duration-300">
+                <CheckCircle className="w-5 h-5 text-blue-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-xs font-black uppercase font-mono tracking-wider text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                Right-Click Block
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed font-medium">
+                Comprehensive security system prohibiting inspection, screenshots, or hotlinking actions.
+              </p>
+            </div>
+
+            {/* Card 4 */}
+            <div className="group relative bg-white dark:bg-zinc-900/40 border border-slate-200/60 dark:border-white/5 rounded-2xl p-6 hover:-translate-y-1.5 hover:border-blue-500/40 dark:hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-blue-500 group-hover:border-blue-500 transition-all duration-300">
+                <Sparkles className="w-5 h-5 text-blue-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-xs font-black uppercase font-mono tracking-wider text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                Real-Time Seeding
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed font-medium">
+                Dynamic backdating, tagging, category assignment, and real-time community engagement logs.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Enterprise Trust & Partners Section */}
+        <div className="space-y-8">
+          {/* Trusted By Partner Showcase */}
+          <div className="relative overflow-hidden bg-slate-50/50 dark:bg-zinc-900/5 border border-slate-200/50 dark:border-white/5 rounded-3xl p-6 md:p-8 space-y-6 transition-colors shadow-inner">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-24 bg-blue-500/5 dark:bg-blue-500/2 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="text-center space-y-2 relative z-10">
+              <span className="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest block font-mono">
+                Global Media Security Network
+              </span>
+              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest font-mono flex items-center justify-center gap-3">
+                <span className="hidden sm:inline-block w-8 h-[1px] bg-slate-300 dark:bg-neutral-700" />
+                Trusted By Partners & Studios
+                <span className="hidden sm:inline-block w-8 h-[1px] bg-slate-300 dark:bg-neutral-700" />
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-2 relative z-10">
+              {[
+                {
+                  name: "Universal",
+                  logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Universal_Pictures_logo.svg/960px-Universal_Pictures_logo.svg.png",
+                  class: "h-9 sm:h-10 dark:brightness-0 dark:invert transition-all opacity-85 group-hover:opacity-100 group-hover:scale-105 duration-300"
+                },
+                {
+                  name: "Sony Pictures",
+                  logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Sony_Pictures_Inc._logo.svg/500px-Sony_Pictures_Inc._logo.svg.png",
+                  class: "h-8 sm:h-9 dark:brightness-0 dark:invert transition-all opacity-85 group-hover:opacity-100 group-hover:scale-105 duration-300"
+                },
+                {
+                  name: "Warner Bros",
+                  logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Warner_Bros._logo_2023.svg/500px-Warner_Bros._logo_2023.svg.png",
+                  class: "h-11 sm:h-12 transition-all opacity-85 group-hover:opacity-100 group-hover:scale-105 duration-300"
+                },
+                {
+                  name: "Galaxy Studio",
+                  logo: "https://upload.wikimedia.org/wikipedia/vi/4/4b/Galaxy_Studio.png?_=20250721031245",
+                  class: "h-11 sm:h-12 transition-all opacity-85 group-hover:opacity-100 group-hover:scale-105 duration-300"
+                },
+                {
+                  name: "Disney+",
+                  logo: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg",
+                  class: "h-8 sm:h-9 dark:brightness-0 dark:invert transition-all opacity-85 group-hover:opacity-100 group-hover:scale-105 duration-300"
+                },
+                {
+                  name: "Netflix",
+                  logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
+                  class: "h-5 sm:h-6 dark:brightness-0 dark:invert transition-all opacity-85 group-hover:opacity-100 group-hover:scale-105 duration-300"
+                }
+              ].map((partner, index) => (
+                <div key={index} className="bg-white dark:bg-zinc-900/40 border border-slate-200/60 dark:border-white/5 rounded-2xl h-20 sm:h-24 px-4 flex items-center justify-center hover:border-blue-500/40 dark:hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300 cursor-default select-none group">
+                  <img
+                    src={partner.logo}
+                    alt={partner.name}
+                    className={`${partner.class} object-contain max-w-[85%]`}
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

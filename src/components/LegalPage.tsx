@@ -94,7 +94,7 @@ export default function LegalPage() {
                       <span className="font-bold text-slate-900 dark:text-neutral-300">Identification of Copyrighted Work:</span> Clear and comprehensive identification of the copyrighted work claimed to have been infringed, or, if multiple copyrighted works are covered by a single notification, a representative list of such works.
                     </li>
                     <li>
-                      <span className="font-bold text-slate-900 dark:text-neutral-300">Identification of Infringing Material (URLs):</span> Identification of the material that is claimed to be infringing or to be the subject of infringing activity and that is to be removed or access to which is to be disabled, along with <span className="font-semibold text-blue-500">exact URLs or Video IDs</span> (e.g. <code className="font-mono bg-slate-100 dark:bg-white/5 px-1 py-0.5 rounded">/?v=video-id</code>) to enable our technical team to locate and permanently scrub the media file from our edge CDN caches.
+                      <span className="font-bold text-slate-900 dark:text-neutral-300">Identification of Infringing Material (URLs):</span> Identification of the material that is claimed to be infringing or to be the subject of infringing activity and that is to be removed or access to which is to be disabled, along with <span className="font-semibold text-blue-500">exact URLs or Video IDs</span> (e.g. <code className="font-mono bg-slate-100 dark:bg-white/5 px-1 py-0.5 rounded">/watch?v=video-id</code>) to enable our technical team to locate and permanently scrub the media file from our edge CDN caches.
                     </li>
                     <li>
                       <span className="font-bold text-slate-900 dark:text-neutral-300">Contact Information:</span> Information reasonably sufficient to permit Videocites to contact you, such as your legal company name, mailing address, telephone number, and, if available, an active email address.
@@ -150,8 +150,8 @@ export default function LegalPage() {
                     <p className="font-bold">Videocites ID LTD — Legal & Regulatory Compliance Department</p>
                     <p>Attn: DMCA Copyright Agent (Lead IP Counsel)</p>
                     <p>Corporate Office: Videocites Headquarters, Silicon Valley, CA, USA</p>
-                    <p>Email: <span className="text-blue-500">legal@videocites.com</span></p>
-                    <p>Alternate Liaison Email: <span className="text-blue-400">compliance@videocites.com</span></p>
+                    <p>Email: <span className="text-blue-500">legal@videocites.com.au</span></p>
+                    <p>Alternate Liaison Email: <span className="text-blue-400">compliance@videocites.com.au</span></p>
                   </div>
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold italic">
                     Disclaimer: Under Section 512(f) of the DMCA, any person who knowingly and materially misrepresents that material or activity is infringing, or was removed by mistake or misidentification, may be subject to severe civil damages and liability for attorney's fees.

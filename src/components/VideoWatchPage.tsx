@@ -9,6 +9,7 @@ import VideoPlayer from "./VideoPlayer";
 import MarkdownView from "./MarkdownView";
 import { motion, AnimatePresence } from "motion/react";
 import { safeStorage } from "../utils/safeStorage";
+import { sanitizeAndTranslateComment } from "../utils/commentGenerator";
 
 const getAvatarForName = (name: string) => {
   const avatars = [
@@ -55,7 +56,15 @@ export default function VideoWatchPage({
   const [localComments, setLocalComments] = useState<any[]>(comments || []);
 
   const [commenterName, setCommenterName] = useState(() => {
-    return safeStorage.getItem("videocites-commenter-name") || "";
+    const saved = safeStorage.getItem("videocites-commenter-name");
+    if (saved) return saved;
+    const defaultNames = [
+      "Liam Carter", "Olivia Johnson", "Ethan Davis", "Sophia Taylor", 
+      "Mason Miller", "Emma Watson", "Alex Mercer", "Chloe Thompson"
+    ];
+    const chosen = defaultNames[Math.floor(Math.random() * defaultNames.length)];
+    safeStorage.setItem("videocites-commenter-name", chosen);
+    return chosen;
   });
 
   const [commentSort, setCommentSort] = useState<"top" | "newest">("top");
@@ -196,7 +205,9 @@ export default function VideoWatchPage({
 
   // Sync comments if video changes
   React.useEffect(() => {
-    setLocalComments(comments || []);
+    const rawList = comments || [];
+    const translatedList = rawList.map(c => sanitizeAndTranslateComment(c));
+    setLocalComments(translatedList);
   }, [video.id, comments]);
 
   // Handle Share copy link simulation
@@ -229,7 +240,7 @@ export default function VideoWatchPage({
     e.preventDefault();
     if (!userComment.trim()) return;
 
-    const finalName = commenterName.trim() || "Khán giả ẩn danh";
+    const finalName = commenterName.trim() || "Anonymous Viewer";
     const avatar = getAvatarForName(finalName);
     const newComment = {
       id: `c-${Date.now()}`,
@@ -279,7 +290,7 @@ export default function VideoWatchPage({
   const handlePostReply = (commentId: string) => {
     if (!replyText.trim()) return;
 
-    const finalName = commenterName.trim() || "Khán giả ẩn danh";
+    const finalName = commenterName.trim() || "Anonymous Viewer";
     const avatar = getAvatarForName(finalName);
     const newReply = {
       id: `r-${Date.now()}`,

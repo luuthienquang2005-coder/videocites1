@@ -353,7 +353,7 @@ export default function VideoPlayer({
           textShadow: "1px 1px 0px rgba(0,0,0,0.8)"
         }}
       >
-        VNAOH CO-STREAM WATERMARK ID: {viewerId} / IP: SECURE_TUNNEL
+        VIDEOCITES WATERMARK ID: {viewerId} / IP: VIDEOCITES_TUNNEL
       </div>
 
       {/* Alternate floating watermark for screen edge safety */}
@@ -365,7 +365,7 @@ export default function VideoPlayer({
       <div className="absolute bottom-16 right-4 md:bottom-20 md:right-6 pointer-events-none select-none z-10 flex flex-col items-center gap-1 opacity-25 md:opacity-35 group-hover:opacity-65 transition-opacity duration-300">
         <Logo className="w-10 h-10 md:w-12 md:h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]" watermark={true} />
         <span className="text-[7px] md:text-[8px] font-mono tracking-widest text-white/70 font-bold uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-          SECURE STREAM
+          VIDEOCITES
         </span>
       </div>
 
@@ -379,7 +379,7 @@ export default function VideoPlayer({
             className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-red-950/90 backdrop-blur-xl border border-red-500/30 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-xs text-red-200 shadow-xl z-20 font-sans"
           >
             <ShieldAlert className="w-4 h-4 text-red-400 animate-pulse" />
-            <span>Chính sách Bản quyền Vnaoh: Nội dung thuộc sở hữu trí tuệ tối cao. Hành vi click chuột phải hoặc tải nguồn bị cấm tuyệt đối.</span>
+            <span>Chính sách Bản quyền Videocites: Nội dung thuộc sở hữu trí tuệ tối cao. Hành vi click chuột phải hoặc tải nguồn bị cấm tuyệt đối.</span>
           </motion.div>
         )}
       </AnimatePresence>
