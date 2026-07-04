@@ -120,7 +120,7 @@ export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, the
                 ? "text-amber-600 bg-amber-500/10 hover:bg-amber-500/20" 
                 : "text-amber-400 bg-white/5 hover:bg-white/10"
             }`}
-            title={isLight ? "Bật giao diện tối" : "Bật giao diện sáng"}
+            title={isLight ? "Switch to dark mode" : "Switch to light mode"}
           >
             {isLight ? <Moon className="w-4 h-4 text-slate-700" /> : <Sun className="w-4 h-4 text-amber-400" />}
           </button>
@@ -145,32 +145,20 @@ export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, the
             <div className="flex items-center gap-3">
               <div className="hidden md:flex flex-col items-end text-right">
                 <span className={`text-[9px] font-mono uppercase tracking-widest leading-none ${
-                  isLight ? "text-slate-500" : "text-neutral-400"
+                  isLight ? "text-slate-700" : "text-neutral-400"
                 }`}>
                   SECURE GUEST
                 </span>
               </div>
-              <button
-                onClick={() => onNavigate("admin")}
-                className={`p-2 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold ${
-                  isLight 
-                    ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border-blue-500/20" 
-                    : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20"
-                }`}
-                title="Admin login"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline text-[10px]">LOGIN</span>
-              </button>
             </div>
           )}
 
           <div 
             onClick={() => onNavigate("contact")}
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 border border-white/20 flex items-center justify-center text-white text-xs font-black cursor-pointer hover:scale-105 transition-transform shadow-md"
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 border border-white/20 flex items-center justify-center text-white cursor-pointer hover:scale-105 transition-transform shadow-md"
             title="Secure session"
           >
-            M
+            <ShieldCheck className="w-5 h-5" />
           </div>
         </div>
 
@@ -179,7 +167,7 @@ export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, the
       {/* Mobile nav drawer banner for small devices */}
       <div className={`sm:hidden flex items-center justify-around border-t py-2.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors duration-300 ${
         isLight 
-          ? "bg-slate-50 border-slate-200 text-slate-500" 
+          ? "bg-slate-50 border-slate-200 text-slate-700" 
           : "bg-black/90 border-white/5 text-neutral-400"
       }`}>
         <button onClick={() => onNavigate("home")} className={currentView === "home" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>EXPLORE</button>

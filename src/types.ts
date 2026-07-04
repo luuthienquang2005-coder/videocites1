@@ -39,4 +39,6 @@ export interface VideoComment {
   content: string;
   createdAt: string;
   likes: number;
+  dislikes?: number;
+  replies?: VideoComment[];
 }

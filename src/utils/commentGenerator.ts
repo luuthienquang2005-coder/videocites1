@@ -1,0 +1,427 @@
+import { Video, VideoComment } from "../types";
+
+// Realistic names for International commentators
+const USER_POOL = [
+  { name: "Liam Carter", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80" },
+  { name: "Olivia Johnson", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80" },
+  { name: "Ethan Davis", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&q=80" },
+  { name: "Mason Miller", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" },
+  { name: "Noah Wilson", avatar: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=120&q=80" },
+  { name: "Sophia Taylor", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80" },
+  { name: "Isabella Anderson", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" },
+  { name: "Lucas Thomas", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80" },
+  { name: "Jackson Moore", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80" },
+  { name: "Aiden Martin", avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&q=80" },
+  { name: "Sarah Jenkins", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80" },
+  { name: "David Miller", avatar: "https://images.unsplash.com/photo-1488161628813-04466f872be2?auto=format&fit=crop&w=120&q=80" },
+  { name: "Alex Mercer", avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&q=80" },
+  { name: "Emma Watson", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80" },
+  { name: "Aiko Tanaka", avatar: "https://images.unsplash.com/photo-1526080652727-5b77f74eacd2?auto=format&fit=crop&w=120&q=80" },
+  { name: "Michael Smith", avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&q=80" },
+  { name: "Emily Johnson", avatar: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&w=120&q=80" },
+  { name: "Sophia Martinez", avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=120&q=80" },
+  { name: "Daniel Lee", avatar: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?auto=format&fit=crop&w=120&q=80" },
+  { name: "Jessica Brown", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80" },
+  { name: "Oliver Davies", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" },
+  { name: "Amélie Laurent", avatar: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=120&q=80" },
+  { name: "Chloe Thompson", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80" },
+  { name: "Liam Gallagher", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80" },
+  { name: "Logan Jackson", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80" },
+  { name: "James White", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" },
+  { name: "Harper Harris", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80" },
+  { name: "Benjamin Martin", avatar: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&w=120&q=80" },
+  { name: "Elijah Thompson", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&q=80" },
+  { name: "Mia Garcia", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80" }
+];
+
+// Helper to shuffle array
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Category-based templates for general interest comments
+const CATEGORY_TEMPLATES: Record<string, { vi: string[]; en: string[] }> = {
+  "Music": {
+    vi: [
+      "Giai điệu này quá tuyệt vời, nghe lặp đi lặp lại không chán!",
+      "Hệ thống âm thanh của Videocites nghe chất lượng thật, âm bass rất chắc.",
+      "Có ai nghe bài này lúc nửa đêm giống mình không?",
+      "Nghệ sĩ tài năng quá, hy vọng sẽ sớm ra thêm nhiều tác phẩm mới.",
+      "Nhạc chill thật sự, cực kỳ thích hợp để tập trung làm việc hoặc code.",
+      "Tuyệt phẩm! Đã thả tim và đăng ký kênh.",
+      "Vibe bài này đỉnh dã man, nghe xong thấy tâm hồn thư thái hẳn.",
+      "Sự kết hợp hoàn hảo giữa âm thanh và hình ảnh."
+    ],
+    en: [
+      "This melody is absolutely breathtaking. On repeat for hours!",
+      "The audio quality on this player is outstanding. Super crisp highs.",
+      "Who else is listening to this in 2026? Such a masterpiece.",
+      "The synthesizers here are perfectly mixed. Pure eargasm.",
+      "This beat is so clean. Definitely adding to my late night coding playlist.",
+      "Incredible performance! Truly talented artist.",
+      "The visualizer matches the atmospheric tone perfectly."
+    ]
+  },
+  "Tech": {
+    vi: [
+      "Công nghệ đang thay đổi nhanh chóng thật, xem mà ngỡ ngàng.",
+      "Phân tích cực kỳ có chiều sâu và thực tế, cảm ơn tác giả.",
+      "Thiết bị này hiệu năng đỉnh quá nhưng giá chắc không hề rẻ chút nào.",
+      "Có ai đang sử dụng sản phẩm này cho mình xin tí review thực tế với.",
+      "Đột phá công nghệ đỉnh cao! Rất đáng mong chờ trong tương lai.",
+      "Sắp tới kỷ nguyên của AI rồi, học hỏi liên tục không là bị đào thải ngay.",
+      "Video giải thích cực kỳ dễ hiểu cho những người ngoại đạo như mình.",
+      "Thích cách trình bày thông tin mạch lạc, rõ ràng và có dẫn chứng."
+    ],
+    en: [
+      "The engineering depth behind this technology is mind-blowing.",
+      "Fascinating analysis! Very rare to find such high-quality hardware reviews.",
+      "The performance numbers here are impressive. Can't wait for retail launch.",
+      "This will disrupt the entire industry. Incredible forward-looking concepts.",
+      "Outstanding breakdown. Learned so much from this single video.",
+      "The transition to these new protocols makes total sense.",
+      "Superb explanation of quantum and neural systems."
+    ]
+  },
+  "Gaming": {
+    vi: [
+      "Đồ họa game thời nay đỉnh thật, nhìn như đời thực luôn.",
+      "Kỹ năng xử lý đỉnh cao quá, xem mà học hỏi được bao nhiêu thứ.",
+      "Game này cấu hình tối thiểu thế nào vậy mọi người ơi?",
+      "Trận đấu mãn nhãn thật sự, pha lật kèo không thể tin nổi!",
+      "Tuổi thơ ùa về khi nhìn thấy những tựa game này.",
+      "Chờ đợi ngày game này chính thức phát hành để trải nghiệm.",
+      "Cách chơi sáng tạo quá, mình chưa từng nghĩ tới hướng tiếp cận này.",
+      "Nhìn mượt mà thích mắt ghê, 60FPS chuẩn chỉ có khác."
+    ],
+    en: [
+      "The graphics are getting too realistic! Unreal Engine is insane.",
+      "Top-tier mechanics. That clutch play at the end was unbelievable!",
+      "What a nostalgic trip down memory lane. Legendary game.",
+      "I've played this for 100+ hours and still learned a new trick from you.",
+      "Butter smooth gameplay. Videocites video player handles fast motion great.",
+      "Is this running on a custom engine or Unity? The lighting is beautiful.",
+      "Absolutely brilliant strategy. Subscribed for more gaming content."
+    ]
+  },
+  "Education": {
+    vi: [
+      "Bài giảng vô cùng bổ ích và súc tích, thầy giải thích rất dễ tiếp thu.",
+      "Giá như ngày xưa đi học được dạy một cách trực quan thế này.",
+      "Tài liệu tham khảo quý giá cho việc học tập và nghiên cứu.",
+      "Cảm ơn những chia sẻ học thuật đầy tâm huyết của đội ngũ.",
+      "Kiến thức này rất thực tế, giúp ích rất nhiều cho công việc hiện tại của mình.",
+      "Xem đi xem lại vẫn thấy hay. Rất mong chờ các bài học tiếp theo.",
+      "Giải thích các định lý phức tạp một cách cực kỳ đơn giản và dễ hiểu.",
+      "Một kênh giáo dục chất lượng cao hiếm hoi giữ được giá trị cốt lõi."
+    ],
+    en: [
+      "An exceptionally well-researched educational resource. Kudos!",
+      "I wish my university professors explained subjects with this level of clarity.",
+      "Highly informative! This cleared up so many doubts I had.",
+      "Beautifully animated and visually organized. Perfect for visual learners.",
+      "The cryptographic explanations here are so elegant.",
+      "An absolute masterclass in science communication.",
+      "Thank you for sharing this knowledge with the public for free!"
+    ]
+  },
+  "News & Documentary": {
+    vi: [
+      "Phóng sự chân thực, phản ánh đúng thực trạng hiện nay.",
+      "Rất trân trọng nỗ lực ghi hình thực tế đầy nguy hiểm của ê kíp.",
+      "Thông tin vô cùng bổ ích, cần lan tỏa rộng rãi hơn đến cộng đồng.",
+      "Góc nhìn rất đa chiều và khách quan, không hề áp đặt.",
+      "Xem xong mà thấy có nhiều điều phải suy ngẫm về cuộc sống.",
+      "Cảm ơn các nhà báo đã dũng cảm nói lên tiếng nói của sự thật.",
+      "Biên tập xuất sắc, âm thanh dẫn dắt cảm xúc người xem rất tốt."
+    ],
+    en: [
+      "This is what real investigative journalism looks like. Remarkable.",
+      "Stunning footage. The documentary style is incredibly immersive.",
+      "An eye-opening expose. Thank you for shedding light on this issue.",
+      "Extremely well produced and professional. Deserves a broadcasting award.",
+      "The editing and progression of this report kept me hooked from start to finish.",
+      "Deeply moving and objective storytelling."
+    ]
+  },
+  "Entertainment": {
+    vi: [
+      "Cười bể bụng với mấy quả meme này, duyên dáng quá chừng!",
+      "Giải trí cuối tuần thế này là đủ rồi, xua tan hết mệt mỏi.",
+      "Cách dựng video thông minh và lôi cuốn ghê, xem không rời mắt.",
+      "Diễn xuất đỉnh cao thật sự, biểu cảm gương mặt quá tự nhiên.",
+      "Nội dung sáng tạo dã man, xem đi xem lại vẫn thấy hài.",
+      "Kênh này làm nội dung giải trí sạch, xem rất thoải mái tinh thần.",
+      "Một bầu trời nghệ thuật và tiếng cười. Chúc nhóm ngày càng phát triển!"
+    ],
+    en: [
+      "This is pure gold! Laughed so hard my cheeks hurt.",
+      "The comedic timing in this video is absolutely impeccable.",
+      "Such a high-production entertainment piece. Love the vibes!",
+      "This deserves millions of views. Instant classic.",
+      "Incredibly creative editing. The fast pace keeps you fully engaged.",
+      "Can't stop rewatching! The chemistry here is perfect."
+    ]
+  },
+  "Nature": {
+    vi: [
+      "Thiên nhiên hoang dã đẹp một cách kỳ vĩ và choáng ngợp.",
+      "Độ phân giải 4K trên màn hình của mình nhìn nét đến từng ngọn cỏ.",
+      "Cảm thấy con người thật nhỏ bé trước sự vĩ đại của tự nhiên.",
+      "Cảnh quay flycam đỉnh thật, góc nhìn vô cùng rộng lớn.",
+      "Video này giúp mình giải tỏa stress cực tốt sau giờ làm việc căng thẳng.",
+      "Ước gì một lần được đặt chân đến vùng đất hoang sơ này.",
+      "Nhạc nền hòa quyện hoàn hảo với tiếng sóng vỗ và tiếng gió."
+    ],
+    en: [
+      "Mother Nature is the ultimate artist. Truly breathtaking shots.",
+      "The color grading on these forest and ocean scenes is masterful.",
+      "Stunning drone footage! What camera gear was used to capture this?",
+      "So peaceful and calming. Watching this after a hectic day is therapeutic.",
+      "We must do everything we can to preserve these wild environments.",
+      "The crisp sound design makes me feel like I am standing right there."
+    ]
+  },
+  "Film & Cinema": {
+    vi: [
+      "Kỹ xảo điện ảnh đỉnh cao, nhìn mượt mà và hoành tráng quá.",
+      "Góc quay và ánh sáng nghệ thuật dã man, đúng chuẩn cine.",
+      "Cốt truyện ngắn nhưng đầy tính nhân văn, xem xong thấy nghẹn ngào.",
+      "Một bộ phim ngắn xuất sắc cả về mặt hình ảnh lẫn âm thanh.",
+      "Rất khâm phục tài năng biên kịch và đạo diễn của tác phẩm này.",
+      "Màu sắc của phim đẹp quá, nhìn rất có chiều sâu nghệ thuật."
+    ],
+    en: [
+      "The cinematography here is world-class. Every frame is a painting.",
+      "Stunning CGI work! Blender community is showing what is possible.",
+      "What an emotional rollercoaster in just a few minutes. Masterful storytelling.",
+      "The atmospheric depth and lightning design are absolutely incredible.",
+      "This is cinema. Incredible passion project.",
+      "Brilliant soundscapes. The orchestral score matches the emotional beats."
+    ]
+  }
+};
+
+// Caption/Description keywords extractor to generate specialized matching comments
+const CAPTION_KEYWORD_TEMPLATES = [
+  {
+    keywords: ["hanoi", "hà nội", "bún chả", "phở", "street food", "ẩm thực"],
+    vi: [
+      "Thèm bún chả và phở Hà Nội quá! Xem xong chỉ muốn xách balo lên đi ngay.",
+      "Ẩm thực Hà Nội cổ kính và tinh tế thật sự. Video làm rất có tâm.",
+      "Hà Nội 36 phố phường có những quán ăn gia truyền đỉnh cao lắm.",
+      "Nhìn tô phở bò nghi ngút khói thèm rớt nước mắt. Nhất định phải thử khi ra Hà Nội."
+    ],
+    en: [
+      "Hanoi street food is legendary! I dream about authentic Pho and Bun Cha every day.",
+      "This looks absolutely mouthwatering. Vietnamese cuisine is unmatched.",
+      "The Old Quarter has some of the best hidden culinary gems in Asia.",
+      "Excellent guide to Hanoi food culture. Added to my travel bucket list!"
+    ]
+  },
+  {
+    keywords: ["unreal", "ue5", "nanite", "lumen", "game engine", "rtx"],
+    vi: [
+      "Unreal Engine 5 đúng là một cuộc cách mạng đồ họa game.",
+      "Công nghệ Lumen chiếu sáng thời gian thực nhìn đã mắt thật.",
+      "Card RTX gánh cấu hình game này chắc cũng mệt bở hơi tai đấy.",
+      "Chi tiết vật liệu Nanite nhìn cận cảnh không thấy một vết răng cưa nào luôn."
+    ],
+    en: [
+      "Unreal Engine 5.5 nanite geometry processing is absolute witchcraft.",
+      "The global illumination from Lumen makes pre-baked lighting obsolete.",
+      "Tested this on an RTX 4080 and it looks incredibly sharp and lifelike.",
+      "Epic Games is pushing real-time rendering boundaries further than anyone else."
+    ]
+  },
+  {
+    keywords: ["synth", "synthesizer", "analog", "modular", "moog", "lofi"],
+    vi: [
+      "Bộ Eurorack Modular chất lừ luôn, phối hợp âm thanh quá nhịp nhàng.",
+      "Moog Sub 37 cho âm bass sâu lắng dã man, rung cả lồng ngực.",
+      "Nhạc analog luôn có một độ ấm áp và mộc mạc đặc trưng.",
+      "Chill cực kỳ! Setup phòng thu nhìn cũng rất công nghệ và tương lai."
+    ],
+    en: [
+      "That modular synth rig must cost a fortune. Absolutely brilliant sound design!",
+      "Nothing beats the warmth of authentic analog filters. Prophet-6 is amazing.",
+      "This synth patch is so spacious. Beautiful low-end warm frequency.",
+      "An incredibly clean live jam. Your eurorack routing is absolute genius."
+    ]
+  },
+  {
+    keywords: ["quantum", "comput", "lượng tử", "máy tính"],
+    vi: [
+      "Máy tính lượng tử sẽ giải quyết được những bài toán mà siêu máy tính hiện nay bó tay.",
+      "Cơ học lượng tử khó hiểu thật sự, nhưng video này minh họa rất dễ hình dung.",
+      "Sự chồng chập qubit hoạt động kỳ diệu ghê, đúng là ranh giới giữa khoa học và viễn tưởng."
+    ],
+    en: [
+      "Quantum superposition is such a mind-bending concept, explained beautifully.",
+      "This is the real frontier of computing. Excellent breakdown on qubits.",
+      "Understanding quantum mechanics through visual rendering is incredibly helpful."
+    ]
+  },
+  {
+    keywords: ["patagonia", "glacier", "mountain", "hoang dã", "sông băng"],
+    vi: [
+      "Vùng đất Patagonia kỳ vĩ quá, nhìn các sông băng khổng lồ mà nổi da gà.",
+      "Drone bay sát vách núi hiểm trở thật, kỹ năng điều khiển flycam siêu đỉnh.",
+      "Cảnh sắc thiên nhiên hoang sơ không một dấu chân người, tuyệt đẹp."
+    ],
+    en: [
+      "Patagonia has the most dramatic mountain peaks in the world. Stunning aerials.",
+      "The sheer scale of those glaciers is terrifying and majestic at the same time.",
+      "Incredible camera work! Capturing wildlife in these freezing conditions is tough."
+    ]
+  },
+  {
+    keywords: ["ai", "generative", "algorithm", "thuật toán", "trí tuệ nhân tạo"],
+    vi: [
+      "Trí tuệ nhân tạo đang xóa nhòa ranh giới giữa khoa học kỹ thuật và nghệ thuật.",
+      "Thuật toán tạo tác phẩm nghệ thuật nhìn rất có chiều sâu nhưng vẫn thiếu một chút hồn người.",
+      "Chủ đề bản quyền tranh vẽ AI đang cực kỳ nóng bỏng hiện nay.",
+      "Càng xem càng thấy tương lai loài người sẽ gắn liền chặt chẽ với AI."
+    ],
+    en: [
+      "Can algorithms possess genuine creativity? Such a profound philosophical query.",
+      "The latent space walkthrough was visually outstanding and helpful.",
+      "AI art is a powerful amplifier for human artists, not just a replacement.",
+      "Excellent overview of diffusion models and neural networks."
+    ]
+  },
+  {
+    keywords: ["csgt", "giao thông", "quá khổ", "quá tải", "xe tải"],
+    vi: [
+      "Mấy hung thần xe quá tải này tàn phá đường xá kinh khủng, cần phạt thật nặng.",
+      "Lực lượng tuần tra giao thông làm việc nghiêm túc thế này thì người dân yên tâm hơn hẳn.",
+      "Camera ẩn ghi hình xuất sắc quá, vạch trần được nhiều hành vi vi phạm pháp luật."
+    ],
+    en: [
+      "Excellent undercover work highlighting the danger of overloaded cargo trucks.",
+      "Safety on public roads is paramount. Great report on traffic regulations.",
+      "These heavy trucks completely destroy the infrastructure. Strict fines are necessary."
+    ]
+  }
+];
+
+// Fallback comments that mention the caption or description directly
+const CAPTION_FALLBACK_TEMPLATES = {
+  vi: [
+    "Đọc phần mô tả chi tiết của video mới hiểu hết được sự tâm huyết của tác giả.",
+    "Mô tả video đầy đủ thông tin hữu ích quá, cảm ơn kênh đã chia sẻ.",
+    "Nội dung chuẩn chỉ đúng như những gì viết ở caption luôn.",
+    "Thích cách tác giả giải thích chi tiết trong phần description.",
+    "Đọc caption thấy có nhiều thông tin nghiên cứu rất chuyên sâu.",
+    "Đọc chú thích chi tiết mới thấy tác giả đầu tư kỹ lưỡng như thế nào."
+  ],
+  en: [
+    "The description has some really cool insights. Thanks for sharing!",
+    "I love how detailed the caption is. It really adds to the viewing experience.",
+    "Very detailed breakdown in the description! Appreciate the extra info.",
+    "Reading the description before watching helped me grasp the concepts so much better.",
+    "Excellent caption notes. Shows the high level of research put into this video."
+  ]
+};
+
+// Generate 20-30 comments for a given video
+export function generateCommentsForVideo(video: Video, count = 25): VideoComment[] {
+  const generated: VideoComment[] = [];
+  const selectedUsers = shuffleArray(USER_POOL);
+  
+  // 1. Gather all potential templates
+  let candidateVi: string[] = [];
+  let candidateEn: string[] = [];
+
+  // Match keyword templates from the caption/description/title
+  const combinedText = `${video.title} ${video.description || ""} ${video.tags.join(" ")}`.toLowerCase();
+  
+  let keywordMatched = false;
+  for (const item of CAPTION_KEYWORD_TEMPLATES) {
+    const matches = item.keywords.some(keyword => combinedText.includes(keyword));
+    if (matches) {
+      candidateVi.push(...item.vi);
+      candidateEn.push(...item.en);
+      keywordMatched = true;
+    }
+  }
+
+  // Also include general category templates
+  const categoryGroup = CATEGORY_TEMPLATES[video.category] || CATEGORY_TEMPLATES["Film & Cinema"];
+  candidateVi.push(...categoryGroup.vi);
+  candidateEn.push(...categoryGroup.en);
+
+  // If keyword matches exist, prioritize them, but also add caption fallback templates
+  candidateVi.push(...CAPTION_FALLBACK_TEMPLATES.vi);
+  candidateEn.push(...CAPTION_FALLBACK_TEMPLATES.en);
+
+  // De-duplicate candidate lists
+  candidateVi = Array.from(new Set(candidateVi));
+  candidateEn = Array.from(new Set(candidateEn));
+
+  // Determine ratio of Vietnamese to English comments (100% English)
+  const viWeight = 0; // Force 100% English comments
+
+  // Setup date range
+  const pubDate = new Date(video.publishedAt);
+  const now = new Date("2026-07-04T11:30:00Z"); // fixed simulated current time
+
+  // Shuffle candidates
+  const shuffledVi = shuffleArray(candidateVi);
+  const shuffledEn = shuffleArray(candidateEn);
+
+  let viIdx = 0;
+  let enIdx = 0;
+
+  for (let i = 0; i < count; i++) {
+    const user = selectedUsers[i % selectedUsers.length];
+    
+    // Pick language (always English)
+    const isVi = false;
+    let content = "";
+
+    if (isVi) {
+      if (viIdx >= shuffledVi.length) viIdx = 0;
+      content = shuffledVi[viIdx++];
+    } else {
+      if (enIdx >= shuffledEn.length) enIdx = 0;
+      content = shuffledEn[enIdx++];
+    }
+
+    // Set realistic timestamp after publishedAt but before now
+    const pubTimeMs = pubDate.getTime();
+    const nowMs = now.getTime();
+    const diffMs = Math.max(10 * 60 * 1000, nowMs - pubTimeMs); // minimum 10 mins apart
+
+    // Divide the entire lifetime of the video into 'count' segments
+    // and randomly position each comment's date inside its respective segment.
+    // This perfectly scatters ("rải rác") the comments across the video's history.
+    const segmentWidth = diffMs / count;
+    const segmentStart = pubTimeMs + (i * segmentWidth);
+    const randomOffsetInSegment = Math.random() * segmentWidth;
+    const commentDate = new Date(segmentStart + randomOffsetInSegment);
+
+    // Set randomized likes favoring older comments
+    const ageFactor = (nowMs - commentDate.getTime()) / (24 * 60 * 60 * 1000); // age in days
+    const maxLikes = Math.floor(Math.log10(video.baseViews + 10) * 12);
+    const baseLikes = Math.floor(Math.random() * maxLikes);
+    const likes = Math.floor(baseLikes * (0.3 + 0.7 * Math.min(1, ageFactor)));
+
+    generated.push({
+      id: `generated-cmt-${video.id}-${i}`,
+      authorName: user.name,
+      authorAvatar: user.avatar,
+      content,
+      createdAt: commentDate.toISOString(),
+      likes
+    });
+  }
+
+  // Sort comments by likes desc (or date) to make it beautiful
+  return generated.sort((a, b) => b.likes - a.likes);
+}

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { 
   Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, 
-  RotateCcw, ShieldAlert, Settings, SquareStack, Check
+  RotateCcw, ShieldAlert, Settings, SquareStack, Check, Tv
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -9,9 +9,19 @@ interface VideoPlayerProps {
   src: string;
   poster: string;
   viewerId?: string;
+  onEnded?: () => void;
+  isTheaterMode?: boolean;
+  onToggleTheater?: () => void;
 }
 
-export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.com" }: VideoPlayerProps) {
+export default function VideoPlayer({ 
+  src, 
+  poster, 
+  viewerId = "mnzfrankie@gmail.com",
+  onEnded,
+  isTheaterMode = false,
+  onToggleTheater
+}: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -223,6 +233,12 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
               .catch(err => console.error("Error exiting fullscreen:", err));
           }
           break;
+        case "t":
+          if (onToggleTheater) {
+            e.preventDefault();
+            onToggleTheater();
+          }
+          break;
         default:
           break;
       }
@@ -230,7 +246,7 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, volume, duration, isMuted]);
+  }, [isPlaying, volume, duration, isMuted, onToggleTheater]);
 
   // Sync state on document-level fullscreen change
   useEffect(() => {
@@ -311,6 +327,7 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
         onCanPlayThrough={() => setIsLoading(false)}
         onLoadStart={() => setIsLoading(true)}
         onProgress={handleProgress}
+        onEnded={onEnded}
         preload="auto"
         className="w-full h-full object-contain cursor-pointer"
         playsInline
@@ -507,6 +524,19 @@ export default function VideoPlayer({ src, poster, viewerId = "mnzfrankie@gmail.
                 >
                   <SquareStack className="w-4 h-4" />
                 </button>
+
+                {/* Theater Mode */}
+                {onToggleTheater && (
+                  <button 
+                    onClick={onToggleTheater}
+                    className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors hidden sm:inline-block ${
+                      isTheaterMode ? "text-blue-400" : "text-gray-300"
+                    }`}
+                    title={isTheaterMode ? "Chế độ mặc định (t)" : "Chế độ rạp chiếu phim (t)"}
+                  >
+                    <Tv className="w-5 h-5" />
+                  </button>
+                )}
 
                 {/* Fullscreen */}
                 <button 

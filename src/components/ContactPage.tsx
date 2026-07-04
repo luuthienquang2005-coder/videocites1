@@ -37,7 +37,7 @@ export default function ContactPage() {
             <h1 className="text-4xl font-extrabold tracking-tight leading-none text-slate-900 dark:text-white">
               We are always here to support you.
             </h1>
-            <p className="text-sm leading-relaxed text-slate-600 dark:text-neutral-400">
+            <p className="text-sm leading-relaxed text-slate-800 dark:text-neutral-400">
               Have questions about copyright, licensing inquiries, or technical support? Send your message directly to the corresponding department for a prompt response from the Videocites team.
             </p>
 
@@ -46,16 +46,16 @@ export default function ContactPage() {
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold uppercase font-mono text-slate-800 dark:text-white">Corporate Headquarters</h4>
-                  <p className="text-xs text-slate-600 dark:text-neutral-400 mt-1">728 Silicon Valley, CA, USA.</p>
+                  <h4 className="text-xs font-bold uppercase font-mono text-slate-900 dark:text-white">Corporate Headquarters</h4>
+                  <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">728 Silicon Valley, CA, USA.</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold uppercase font-mono text-slate-800 dark:text-white">Support Mailbox</h4>
-                  <p className="text-xs text-slate-600 dark:text-neutral-400 mt-1">support@videocites.com</p>
+                  <h4 className="text-xs font-bold uppercase font-mono text-slate-900 dark:text-white">Support Mailbox</h4>
+                  <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">support@videocites.com</p>
                 </div>
               </div>
 
@@ -85,7 +85,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Inquiry Submitted Successfully!</h3>
-                    <p className="text-xs text-slate-600 dark:text-neutral-400 mt-1 max-w-sm">
+                    <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1 max-w-sm">
                       Thank you, {name}. Your request has been forwarded to the **{department.toUpperCase()}** department. Our specialist will reach out to you at **{email}** within 24 business hours.
                     </p>
                   </div>
@@ -99,7 +99,7 @@ export default function ContactPage() {
                   
                   {/* Name input */}
                   <div>
-                    <label className="block text-[10px] font-mono text-slate-500 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Full Name</label>
+                    <label className="block text-[10px] font-mono text-slate-700 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Full Name</label>
                     <input
                       type="text"
                       value={name}
@@ -112,7 +112,7 @@ export default function ContactPage() {
 
                   {/* Email input */}
                   <div>
-                    <label className="block text-[10px] font-mono text-slate-500 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                    <label className="block text-[10px] font-mono text-slate-700 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Email Address</label>
                     <input
                       type="email"
                       value={email}
@@ -125,7 +125,7 @@ export default function ContactPage() {
 
                   {/* Department select */}
                   <div>
-                    <label className="block text-[10px] font-mono text-slate-500 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Select Department</label>
+                    <label className="block text-[10px] font-mono text-slate-700 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Select Department</label>
                     <select
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
@@ -139,7 +139,7 @@ export default function ContactPage() {
 
                   {/* Message input */}
                   <div>
-                    <label className="block text-[10px] font-mono text-slate-500 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Detailed Inquiry</label>
+                    <label className="block text-[10px] font-mono text-slate-700 dark:text-neutral-400 uppercase tracking-widest mb-1.5">Detailed Inquiry</label>
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}

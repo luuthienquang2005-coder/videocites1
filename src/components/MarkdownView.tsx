@@ -8,7 +8,7 @@ export default function MarkdownView({ content }: MarkdownViewProps) {
   const lines = content.split("\n");
 
   return (
-    <div className="space-y-3 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+    <div className="space-y-3 text-sm leading-relaxed text-slate-800 dark:text-gray-300">
       {lines.map((line, idx) => {
         const trimmed = line.trim();
 
@@ -44,7 +44,7 @@ export default function MarkdownView({ content }: MarkdownViewProps) {
             const parts = text.split(/\*\*(.*?)\*\*/);
             return (
               <ul key={idx} className="list-disc pl-5 my-1 space-y-1">
-                <li className="text-gray-600 dark:text-gray-300">
+                <li className="text-slate-800 dark:text-gray-300">
                   {parts[0]}
                   <strong className="font-semibold text-gray-900 dark:text-white">{parts[1]}</strong>
                   {parts[2]}
@@ -54,7 +54,7 @@ export default function MarkdownView({ content }: MarkdownViewProps) {
           }
           return (
             <ul key={idx} className="list-disc pl-5 my-1">
-              <li className="text-gray-600 dark:text-gray-300">{text}</li>
+              <li className="text-slate-800 dark:text-gray-300">{text}</li>
             </ul>
           );
         }
@@ -89,7 +89,7 @@ export default function MarkdownView({ content }: MarkdownViewProps) {
           return (
             <p key={idx} className="my-1">
               {parts[0]}
-              <em className="italic text-gray-600 dark:text-gray-400">{parts[1]}</em>
+              <em className="italic text-slate-800 dark:text-gray-400">{parts[1]}</em>
               {parts[2]}
             </p>
           );

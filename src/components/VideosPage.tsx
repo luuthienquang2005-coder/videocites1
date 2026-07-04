@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Video } from "../types";
+import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
 import { Play, Eye, ThumbsUp, Calendar, ArrowUpDown, Search, Film, CheckCircle, Sparkles, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -16,11 +17,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState<SortOption>("latest");
 
-  // Dynamically extract categories from all videos
-  const categories = useMemo(() => {
-    const list = new Set(videos.map((v) => v.category));
-    return ["All", ...Array.from(list)];
-  }, [videos]);
+  const categories = ["All", ...CATEGORIES_LIST];
 
   const formatViews = (views: number) => {
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
@@ -50,7 +47,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
         vid.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         vid.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
         vid.author.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "All" || vid.category === selectedCategory;
+      const matchesCategory = selectedCategory === "All" || selectedCategory === "Tất cả" || normalizeCategory(vid.category) === selectedCategory;
       return matchesSearch && matchesCategory;
     });
 
@@ -94,7 +91,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                 {videos.length} Total
               </span>
             </h1>
-            <p className="text-xs md:text-sm text-slate-500 dark:text-neutral-400">
+            <p className="text-xs md:text-sm text-slate-700 dark:text-neutral-400">
               Explore the entire catalog of high-fidelity, copyrighted cinematics protected by Videocites digital rights management.
             </p>
           </div>
@@ -112,7 +109,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
               placeholder="Search by title, tags or author..."
               className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
-            <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 dark:text-neutral-500" />
+            <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-600 dark:text-neutral-500" />
           </div>
 
           {/* Categories Tab Bar - 5 cols */}
@@ -124,7 +121,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   selectedCategory === cat
                     ? "bg-blue-500 text-neutral-950 shadow-md font-black"
-                    : "bg-white dark:bg-white/5 text-slate-600 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white border border-slate-200 dark:border-white/5"
+                    : "bg-white dark:bg-white/5 text-slate-800 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white border border-slate-200 dark:border-white/5"
                 }`}
               >
                 {cat}
@@ -134,7 +131,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
 
           {/* Sort By Dropdown - 3 cols */}
           <div className="lg:col-span-3 flex items-center gap-2.5 justify-end">
-            <div className="flex items-center gap-1 text-xs font-bold font-mono text-slate-500 dark:text-neutral-400 uppercase shrink-0">
+            <div className="flex items-center gap-1 text-xs font-bold font-mono text-slate-700 dark:text-neutral-400 uppercase shrink-0">
               <ArrowUpDown className="w-3.5 h-3.5" />
               <span>Sort:</span>
             </div>
@@ -158,7 +155,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
             <div className="text-center py-20 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl">
               <Film className="w-12 h-12 text-slate-400 dark:text-neutral-600 mx-auto mb-3" />
               <p className="text-sm font-semibold text-slate-700 dark:text-neutral-400">No videos found matching your criteria</p>
-              <p className="text-xs text-slate-500 mt-1">Try resetting filters or changing the search query.</p>
+              <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">Try resetting filters or changing the search query.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -193,7 +190,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
 
                         {/* Category badge */}
                         <span className="absolute top-2.5 left-2.5 bg-blue-500/90 text-neutral-950 font-mono font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md shadow-md">
-                          {vid.category}
+                          {normalizeCategory(vid.category)}
                         </span>
 
                         {/* Play Overlay */}
@@ -210,7 +207,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                           <h3 className="font-extrabold text-sm text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
                             {vid.title}
                           </h3>
-                          <p className="text-xs text-slate-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-slate-700 dark:text-neutral-400 line-clamp-2 leading-relaxed">
                             {vid.description}
                           </p>
                         </div>
@@ -221,7 +218,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                             {vid.tags.slice(0, 3).map((tag) => (
                               <span
                                 key={tag}
-                                className="inline-flex items-center gap-0.5 text-[9px] font-bold font-mono px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-neutral-400 rounded"
+                                className="inline-flex items-center gap-0.5 text-[9px] font-bold font-mono px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-neutral-400 rounded"
                               >
                                 <Tag className="w-2.5 h-2.5" />
                                 {tag}
@@ -236,31 +233,31 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                             <img
                               src={vid.author.avatar}
                               alt={vid.author.name}
-                              className="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                              className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
                             />
                             <div className="flex items-center gap-0.5 min-w-0">
-                              <span className="text-[11px] font-semibold text-slate-700 dark:text-neutral-300 truncate">
+                              <span className="text-xs md:text-sm font-bold text-slate-950 dark:text-neutral-200 truncate">
                                 {vid.author.name}
                               </span>
                               {vid.author.verified && (
-                                <CheckCircle className="w-3 h-3 fill-blue-500 text-neutral-950 shrink-0" />
+                                <CheckCircle className="w-3.5 h-3.5 fill-blue-500 text-neutral-950 shrink-0" />
                               )}
                             </div>
                           </div>
 
                           {/* Stats and Date */}
-                          <div className="flex flex-col items-end shrink-0 gap-1">
-                            <div className="flex items-center gap-2.5 text-[10px] font-mono text-slate-500 dark:text-neutral-400">
-                              <span className="flex items-center gap-0.5" title={`${totalViews.toLocaleString()} views`}>
-                                <Eye className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
+                          <div className="flex flex-col items-end shrink-0 gap-1 text-slate-950 dark:text-neutral-200">
+                            <div className="flex items-center gap-2.5 text-[10px] font-semibold">
+                              <span className="flex items-center gap-0.5 font-extrabold" title={`${totalViews.toLocaleString()} views`}>
+                                <Eye className="w-3.5 h-3.5 text-slate-600 dark:text-neutral-400" />
                                 {formatViews(totalViews)}
                               </span>
-                              <span className="flex items-center gap-0.5" title={`${totalLikes.toLocaleString()} likes`}>
-                                <ThumbsUp className="w-3 h-3 text-slate-400 dark:text-neutral-500" />
+                              <span className="flex items-center gap-0.5 font-extrabold" title={`${totalLikes.toLocaleString()} likes`}>
+                                <ThumbsUp className="w-3.5 h-3.5 text-slate-600 dark:text-neutral-400" />
                                 {formatViews(totalLikes)}
                               </span>
                             </div>
-                            <span className="text-[9px] font-mono text-slate-400 dark:text-neutral-500">
+                            <span className="text-[9px] font-extrabold text-slate-700 dark:text-neutral-400">
                               {formatDate(vid.backdatedDate || vid.publishedAt)}
                             </span>
                           </div>

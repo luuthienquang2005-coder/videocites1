@@ -11,6 +11,7 @@ import MegaFooter from "./components/MegaFooter";
 import AdminLogin from "./components/AdminLogin";
 import VideosPage from "./components/VideosPage";
 import { safeStorage } from "./utils/safeStorage";
+import { generateCommentsForVideo } from "./utils/commentGenerator";
 import { 
   seedInitialDataIfNeeded, 
   subscribeToVideos, 
@@ -28,6 +29,7 @@ export default function App() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.has("v")) return "watch";
+      if (window.location.pathname === "/login" || params.get("page") === "login") return "login";
       return params.get("page") || "home";
     }
     return "home";
@@ -70,7 +72,9 @@ export default function App() {
       const videoId = params.get("v");
       const page = params.get("page");
       
-      if (videoId) {
+      if (window.location.pathname === "/login") {
+        setCurrentView("login");
+      } else if (videoId) {
         setCurrentView("watch");
         setSelectedVideoId(videoId);
       } else if (page) {
@@ -92,19 +96,23 @@ export default function App() {
     }
     
     if (typeof window !== "undefined") {
+      let newUrl = window.location.pathname;
       const params = new URLSearchParams();
+      
       if (view === "watch") {
         const vid = videoId || selectedVideoId || "videocites-sintel-cinematic";
         params.set("v", vid);
+        newUrl = `${window.location.pathname}?${params.toString()}`;
+      } else if (view === "login") {
+        newUrl = "/login";
       } else if (view !== "home") {
         params.set("page", view);
+        newUrl = `${window.location.pathname}?${params.toString()}`;
+      } else {
+        newUrl = "/";
       }
-      const searchStr = params.toString();
-      const newUrl = `${window.location.pathname}${searchStr ? "?" + searchStr : ""}`;
       
-      if (window.location.search !== (searchStr ? "?" + searchStr : "")) {
-        window.history.pushState(null, "", newUrl);
-      }
+      window.history.pushState(null, "", newUrl);
     }
   };
 
@@ -145,6 +153,13 @@ export default function App() {
     return () => unsubscribe();
   }, [selectedVideoId]);
 
+  // Protect admin panel by redirecting non-admins to the login page
+  useEffect(() => {
+    if (currentView === "admin" && !isAdmin) {
+      navigateTo("login");
+    }
+  }, [currentView, isAdmin]);
+
   const handleLogout = () => {
     setIsAdmin(false);
     safeStorage.removeItem("videocites-is-admin");
@@ -179,7 +194,10 @@ export default function App() {
   const handleAddVideo = async (newVideo: Video) => {
     try {
       await saveVideoToFirestore(newVideo);
-      await saveCommentsToFirestore(newVideo.id, []);
+      // Auto-generate 20-30 comments based on the video caption/description
+      const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
+      const generatedComments = generateCommentsForVideo(newVideo, randomCount);
+      await saveCommentsToFirestore(newVideo.id, generatedComments);
     } catch (e) {
       console.error("Failed to add video to Firestore:", e);
     }
@@ -200,9 +218,10 @@ export default function App() {
       // Re-seed initial data
       for (const video of INITIAL_VIDEOS) {
         await saveVideoToFirestore(video);
-      }
-      for (const [videoId, commentList] of Object.entries(MOCK_COMMENTS)) {
-        await saveCommentsToFirestore(videoId, commentList);
+        // Generates 20-30 high-quality comments per video
+        const randomCount = Math.floor(Math.random() * 11) + 20;
+        const generatedComments = generateCommentsForVideo(video, randomCount);
+        await saveCommentsToFirestore(video.id, generatedComments);
       }
       const defaultId = INITIAL_VIDEOS[0]?.id || "";
       setSelectedVideoId(defaultId);
@@ -220,6 +239,19 @@ export default function App() {
       await saveCommentsToFirestore(videoId, updatedComments);
     } catch (e) {
       console.error("Failed to post comment to Firestore:", e);
+    }
+  };
+
+  // Update comments (likes, replies, etc.) in Firestore database
+  const handleUpdateComments = async (videoId: string, updatedComments: VideoComment[]) => {
+    try {
+      setComments((prev) => ({
+        ...prev,
+        [videoId]: updatedComments,
+      }));
+      await saveCommentsToFirestore(videoId, updatedComments);
+    } catch (e) {
+      console.error("Failed to update comments in Firestore:", e);
     }
   };
 
@@ -309,24 +341,26 @@ export default function App() {
             onLikeVideo={handleLikeVideo}
             onDislikeVideo={handleDislikeVideo}
             onAddComment={handleAddComment}
+            onUpdateComments={handleUpdateComments}
           />
         )}
 
-        {currentView === "admin" && (
-          isAdmin ? (
-            <AdminSeedingPanel
-              videos={videos}
-              onUpdateVideo={handleUpdateVideo}
-              onAddVideo={handleAddVideo}
-              onDeleteVideo={handleDeleteVideo}
-              onResetDatabase={handleResetDatabase}
-            />
-          ) : (
-            <AdminLogin onLoginSuccess={() => {
-              setIsAdmin(true);
-              safeStorage.setItem("videocites-is-admin", "true");
-            }} />
-          )
+        {currentView === "login" && (
+          <AdminLogin onLoginSuccess={() => {
+            setIsAdmin(true);
+            safeStorage.setItem("videocites-is-admin", "true");
+            navigateTo("home"); // Redirect back to homepage with admin account!
+          }} />
+        )}
+
+        {currentView === "admin" && isAdmin && (
+          <AdminSeedingPanel
+            videos={videos}
+            onUpdateVideo={handleUpdateVideo}
+            onAddVideo={handleAddVideo}
+            onDeleteVideo={handleDeleteVideo}
+            onResetDatabase={handleResetDatabase}
+          />
         )}
 
         {currentView === "legal" && <LegalPage />}

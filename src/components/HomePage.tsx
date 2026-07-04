@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Video } from "../types";
 import { Play, Eye, ThumbsUp, Sparkles, CheckCircle, Search, Film, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
+import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
 
 interface HomePageProps {
   videos: Video[];
@@ -14,12 +15,13 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const categories = ["All", "Cinematic", "Sci-Fi", "Animation", "Nature"];
+  const categories = ["All", ...CATEGORIES_LIST];
 
   const filteredVideos = videos.filter((vid) => {
     const matchesSearch = vid.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           vid.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === "All" || vid.category === selectedCategory;
+    const normalizedVideoCategory = normalizeCategory(vid.category);
+    const matchesCategory = selectedCategory === "All" || normalizedVideoCategory === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -27,6 +29,19 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
     if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
     return views.toLocaleString();
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch (e) {
+      return dateStr;
+    }
   };
 
   return (
@@ -55,7 +70,7 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
               SINTEL Remastered: 4K UHD Cinematic Experience
             </h1>
             
-            <p className="text-xs md:text-sm text-slate-600 dark:text-neutral-400 leading-relaxed">
+            <p className="text-xs md:text-sm text-slate-800 dark:text-neutral-400 leading-relaxed">
               CGI version meticulously produced by the Blender Foundation, exclusively streaming on Videocites secure distribution servers. Equipped with state-of-the-art DRM anti-copy encryption.
             </p>
 
@@ -81,7 +96,7 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
                 className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? "bg-blue-500 text-neutral-950 shadow-lg font-black"
-                    : "bg-slate-200/50 dark:bg-white/5 text-slate-600 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white border border-slate-200 dark:border-white/5"
+                    : "bg-slate-200/50 dark:bg-white/5 text-slate-800 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white border border-slate-200 dark:border-white/5"
                 }`}
               >
                 {cat}
@@ -98,7 +113,7 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
               placeholder="Search copyrighted videos..."
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500"
             />
-            <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 dark:text-neutral-500" />
+            <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-600 dark:text-neutral-500" />
           </div>
 
         </div>
@@ -109,11 +124,11 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
             <div className="text-center py-20 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl">
               <Film className="w-12 h-12 text-slate-400 dark:text-neutral-600 mx-auto mb-3" />
               <p className="text-sm font-semibold text-slate-700 dark:text-neutral-400">No videos matched your filter criteria</p>
-              <p className="text-xs text-slate-500 mt-1">Try searching with different keywords or changing categories.</p>
+              <p className="text-xs text-slate-700 dark:text-neutral-400 mt-1">Try searching with different keywords or changing categories.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVideos.map((vid) => {
+              {filteredVideos.slice(0, 9).map((vid) => {
                 const totalViews = vid.baseViews + vid.realViews;
                 const totalLikes = vid.baseLikes + vid.realLikes;
                 return (
@@ -147,9 +162,21 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
 
                     {/* Meta info bottom */}
                     <div className="p-4 space-y-3 flex-grow flex flex-col justify-between bg-white dark:bg-transparent">
-                      <h3 className="font-extrabold text-sm text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
-                        {vid.title}
-                      </h3>
+                      <div>
+                        <h3 className="font-extrabold text-sm text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+                          {vid.title}
+                        </h3>
+                        {/* Views and Publication Date - both BOLDED as requested */}
+                        <div className="flex items-center gap-2 text-[11px] mt-1.5 font-sans">
+                          <span className="font-extrabold text-slate-900 dark:text-neutral-100">
+                            {formatViews(totalViews)} views
+                          </span>
+                          <span className="text-slate-600 dark:text-neutral-500 font-bold">•</span>
+                          <span className="font-extrabold text-slate-900 dark:text-neutral-100">
+                            {formatDate(vid.backdatedDate || vid.publishedAt)}
+                          </span>
+                        </div>
+                      </div>
 
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5">
                         {/* Author */}
@@ -157,28 +184,22 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
                           <img 
                             src={vid.author.avatar} 
                             alt={vid.author.name}
-                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                            className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
                           />
                           <div className="flex items-center gap-0.5 min-w-0">
-                            <span className="text-[11px] font-semibold text-slate-700 dark:text-neutral-300 truncate">
+                            <span className="text-xs md:text-sm font-bold text-slate-950 dark:text-neutral-200 truncate">
                               {vid.author.name}
                             </span>
                             {vid.author.verified && (
-                              <CheckCircle className="w-3 h-3 fill-blue-500 text-neutral-950 shrink-0" />
+                              <CheckCircle className="w-3.5 h-3.5 fill-blue-500 text-neutral-950 shrink-0" />
                             )}
                           </div>
                         </div>
 
-                        {/* Interactive Stats badges */}
-                        <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500 dark:text-neutral-400 shrink-0">
-                          <span className="flex items-center gap-1">
-                            <Eye className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
-                            {formatViews(totalViews)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <ThumbsUp className="w-3.5 h-3.5 text-slate-400 dark:text-neutral-500" />
-                            {formatViews(totalLikes)}
-                          </span>
+                        {/* Likes Stats */}
+                        <div className="flex items-center gap-1 text-[10px] font-mono text-slate-950 dark:text-neutral-400 shrink-0 font-bold">
+                          <ThumbsUp className="w-3.5 h-3.5 text-slate-600 dark:text-neutral-500" />
+                          <span>{formatViews(totalLikes)}</span>
                         </div>
                       </div>
 

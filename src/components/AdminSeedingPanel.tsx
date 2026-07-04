@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Video } from "../types";
+import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
 import { 
   Plus, Eye, ThumbsUp, ThumbsDown, Calendar, UploadCloud, 
   CheckCircle, Database, RefreshCw, Trash2, FileVideo, 
@@ -42,7 +43,7 @@ export default function AdminSeedingPanel({
   const [dislikes, setDislikes] = useState(15);
   const [views, setViews] = useState(350000);
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Cinematic");
+  const [category, setCategory] = useState("Film & Cinema");
   const [videoSlug, setVideoSlug] = useState("");
 
   // ----------------------------------------------------
@@ -61,7 +62,7 @@ export default function AdminSeedingPanel({
     setDislikes(Math.floor(Math.random() * 45));
     setViews(Math.floor(Math.random() * 450000) + 1200);
     setDescription("Add a descriptive description for this video...");
-    setCategory("Cinematic");
+    setCategory("Film & Cinema");
     setVideoSlug("");
   };
 
@@ -84,7 +85,7 @@ export default function AdminSeedingPanel({
       setDislikes(selectedVideo.baseDislikes);
       setViews(selectedVideo.baseViews);
       setDescription(selectedVideo.description || "");
-      setCategory(selectedVideo.category || "Cinematic");
+      setCategory(normalizeCategory(selectedVideo.category || "Film & Cinema"));
       setVideoSlug(selectedVideo.id);
     }
   }, [activeTab, selectedVideoId, selectedVideo]);
@@ -224,7 +225,7 @@ export default function AdminSeedingPanel({
   // ----------------------------------------------------
   const handleAutoGetThumbnail = () => {
     if (!videoTitle) {
-      triggerToast("Vui lòng nhập tiêu đề video trước để tự động lấy thumbnail phù hợp!");
+      triggerToast("Please enter a video title first to automatically fetch a matching thumbnail!");
       return;
     }
 
@@ -234,32 +235,41 @@ export default function AdminSeedingPanel({
     if (match && match[1]) {
       const ytId = match[1];
       setThumbnailUrl(`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`);
-      triggerToast("Đã tự động lấy ảnh bìa từ video YouTube!");
+      triggerToast("Automatically fetched cover image from YouTube video!");
       return;
     }
 
     // Unsplash collections based on category
     let photoId = "1506318137071-a8e063b4bec0"; // space/cinematic default
-    if (category === "Sci-Fi") {
+    if (category === "Sci-Fi" || category === "Tech" || category === "Công nghệ") {
       const sciFiPics = ["1451187580459-43490279c0fa", "1506703719100-a0f3a48c0f86", "1446776811953-b23d57bd21aa", "1461360370896-922624d12aa1"];
       photoId = sciFiPics[Math.floor(Math.random() * sciFiPics.length)];
-    } else if (category === "Cinematic") {
+    } else if (category === "Cinematic" || category === "Film & Cinema" || category === "Phim ảnh") {
       const cinePics = ["1485846234645-a62644f84728", "1536440136628-849c177e76a1", "1507679799987-c73779587ccf", "1489599849927-2ee91cede3ba"];
       photoId = cinePics[Math.floor(Math.random() * cinePics.length)];
-    } else if (category === "Animation") {
+    } else if (category === "Animation" || category === "Entertainment" || category === "Giải trí") {
       const animPics = ["1534447677768-be436bb09401", "1607604276583-eef5d076aa5f", "1560942485-b2a11cc13456", "1581833971358-2c8b550f87b3"];
       photoId = animPics[Math.floor(Math.random() * animPics.length)];
-    } else if (category === "Nature") {
+    } else if (category === "Nature" || category === "Thiên nhiên") {
       const naturePics = ["1472214222541-d510753a4907", "1447752875215-b2761acb3c5d", "1470071459604-3b5ec3a7fe05", "1469474968028-56623f02e42e"];
       photoId = naturePics[Math.floor(Math.random() * naturePics.length)];
-    } else if (category === "Surrealist") {
+    } else if (category === "Surrealist" || category === "Gaming" || category === "Trò chơi") {
       const surPics = ["1518709268805-4e9042af9f23", "1490730141103-6cac27aaab94", "1541701494587-cb58502866ab", "1518531933037-91b2f5f229cc"];
       photoId = surPics[Math.floor(Math.random() * surPics.length)];
+    } else if (category === "Music" || category === "Âm nhạc") {
+      const musicPics = ["1511671782779-c97d3d27a1d4", "1470225620780-dba8ba36b745", "1487180142328-054b783fc471", "1514525253161-7a46d19cd819"];
+      photoId = musicPics[Math.floor(Math.random() * musicPics.length)];
+    } else if (category === "Education" || category === "Giáo dục") {
+      const eduPics = ["1456513080510-7bf3a84b82f8", "1524995997946-a1c2e315a42f", "1506784983877-45594efa4cbe", "1513258496099-79a6c24be318"];
+      photoId = eduPics[Math.floor(Math.random() * eduPics.length)];
+    } else if (category === "News & Documentary" || category === "Tin tức & Phóng sự") {
+      const newsPics = ["1504711434969-e33886168f5c", "1541899481282-d53bffe3c35d", "1504711434969-e33886168f5c", "1457369804613-52c61a468e7d"];
+      photoId = newsPics[Math.floor(Math.random() * newsPics.length)];
     }
 
     const unsplashUrl = `https://images.unsplash.com/photo-${photoId}?q=80&auto=format&fit=crop&w=800`;
     setThumbnailUrl(unsplashUrl);
-    triggerToast(`Đã tự động lấy ảnh bìa theo chủ đề ${category}!`);
+    triggerToast(`Automatically fetched cover image for category: ${category}!`);
   };
 
   const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -269,7 +279,7 @@ export default function AdminSeedingPanel({
       reader.onloadend = () => {
         if (typeof reader.result === "string") {
           setThumbnailUrl(reader.result);
-          triggerToast("Đã tải lên và áp dụng ảnh bìa video thành công!");
+          triggerToast("Successfully uploaded and applied video cover image!");
         }
       };
       reader.readAsDataURL(file);
@@ -434,10 +444,10 @@ export default function AdminSeedingPanel({
               </div>
               <div className="space-y-1 min-w-0 flex-grow">
                 <h4 className="text-sm font-black text-slate-800 dark:text-white animate-pulse">
-                  Xuất bản &amp; Cấu hình Mã liên kết thành công!
+                  Successfully Published &amp; Configured Watch Link!
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-neutral-400">
-                  Video "<span className="font-bold text-slate-700 dark:text-neutral-200">{justPublishedVideo.title}</span>" đã có sẵn để xem trên hệ thống bảo mật DRM.
+                  Video "<span className="font-bold text-slate-700 dark:text-neutral-200">{justPublishedVideo.title}</span>" is now available for streaming on the secure DRM system.
                 </p>
               </div>
             </div>
@@ -445,7 +455,7 @@ export default function AdminSeedingPanel({
             <div className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3 justify-between">
               <div className="min-w-0 flex-grow">
                 <span className="text-[9px] font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest block mb-1">
-                  ĐƯỜNG DẪN XEM VIDEO CHÍNH THỨC
+                  OFFICIAL WATCH LINK
                 </span>
                 <code className="text-xs font-mono font-bold text-blue-500 dark:text-blue-400 break-all select-all">
                   {typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/?v={justPublishedVideo.id}
@@ -458,11 +468,11 @@ export default function AdminSeedingPanel({
                   onClick={() => {
                     const url = `${typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au"}/?v=${justPublishedVideo.id}`;
                     navigator.clipboard.writeText(url);
-                    triggerToast("Đã sao chép liên kết vào bộ nhớ tạm!");
+                    triggerToast("Copied link to clipboard!");
                   }}
                   className="px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-xl text-xs font-bold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200/50 dark:border-white/5 active:scale-95"
                 >
-                  Sao chép
+                  Copy Link
                 </button>
                 <a
                   href={`/?v=${justPublishedVideo.id}`}
@@ -571,7 +581,7 @@ export default function AdminSeedingPanel({
                   type="text"
                   value={videoTitle}
                   onChange={(e) => setVideoTitle(e.target.value)}
-                  placeholder="Review Phim Bác Sĩ Thiên Tài..."
+                  placeholder="Enter video title, e.g. Sintel Remastered..."
                   className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all"
                   required
                 />
@@ -580,7 +590,7 @@ export default function AdminSeedingPanel({
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
                   <span>Video URL</span>
-                  <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">kiểm tra / nguồn mẫu</span>
+                  <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">test / sample source</span>
                 </label>
                 <input
                   type="text"
@@ -596,28 +606,28 @@ export default function AdminSeedingPanel({
                     onClick={() => {
                       if (videoUrl) {
                         window.open(videoUrl, "_blank");
-                        triggerToast("Đang mở link video trong tab mới để kiểm tra...");
+                        triggerToast("Opening video URL in a new tab to test...");
                       } else {
-                        triggerToast("Vui lòng nhập URL video trước!");
+                        triggerToast("Please enter a video URL first!");
                       }
                     }}
                     className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
                   >
                     <Eye className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Kiểm Tra Link Video</span>
+                    <span>Test Video Link</span>
                   </button>
                   <div className="relative flex-1">
                     <select
                       onChange={(e) => {
                         if (e.target.value) {
                           setVideoUrl(e.target.value);
-                          triggerToast("Đã chọn nguồn phát mẫu chất lượng cao!");
+                          triggerToast("High-quality sample source selected!");
                           e.target.value = "";
                         }
                       }}
                       className="w-full h-full py-1.5 pl-3 pr-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer border border-slate-200 dark:border-white/5 appearance-none text-center outline-none"
                     >
-                      <option value="" className="text-slate-800 dark:text-neutral-300">Chọn URL Mẫu (MP4)</option>
+                      <option value="" className="text-slate-800 dark:text-neutral-300">Select Sample URL (MP4)</option>
                       <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4">Subaru Outback (Cinematic)</option>
                       <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4">Sintel Movie (Animation)</option>
                       <option value="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">Big Buck Bunny (Nature)</option>
@@ -635,22 +645,22 @@ export default function AdminSeedingPanel({
             {/* CUSTOM VIDEO ID / SLUG (ROUTE LINK IDENTIFIER) */}
             <div className="space-y-2 p-4 bg-slate-50 dark:bg-[#141414]/30 border border-slate-200 dark:border-white/5 rounded-2xl">
               <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
-                <span>Mã định danh liên kết (Video ID / Slug)</span>
+                <span>Watch Link Identifier (Video ID / Slug)</span>
                 <span className="text-[11px] text-blue-500 dark:text-blue-400 font-mono font-semibold">
-                  ?v={videoSlug || "tu-dong-theo-tieu-de"}
+                  ?v={videoSlug || "auto-from-title"}
                 </span>
               </label>
               <input
                 type="text"
                 value={videoSlug}
                 onChange={(e) => setVideoSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                placeholder={activeTab === "add" ? "Để trống để tự động tạo theo tiêu đề (ví dụ: videocites-ten-video-1234)" : "Nhập mã định danh tùy chỉnh cho liên kết watch..."}
+                placeholder={activeTab === "add" ? "Leave blank to auto-generate from title (e.g., videocites-video-title-1234)" : "Enter custom watch identifier..."}
                 className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all font-mono"
               />
               <p className="text-[10px] text-slate-400 dark:text-neutral-500 leading-relaxed">
-                Đường dẫn liên kết xem video sẽ là: <code className="text-blue-500 dark:text-blue-400 font-mono font-semibold">
-                  {(typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au")}/?v={videoSlug || "ten-video-cua-ban"}
-                </code>. Sửa phần này sẽ cập nhật ngay lập tức mã định danh của video trên hệ thống và tự động cập nhật/di chuyển toàn bộ bình luận liên quan sang mã mới.
+                The watch link route will be: <code className="text-blue-500 dark:text-blue-400 font-mono font-semibold">
+                  {(typeof window !== "undefined" ? window.location.origin : "https://www.videocites.com.au")}/?v={videoSlug || "your-video-slug"}
+                </code>. Modifying this will immediately update the video's identifier across the DRM system and seamlessly migrate all associated comments to the new identifier.
               </p>
             </div>
 
@@ -681,11 +691,9 @@ export default function AdminSeedingPanel({
                     className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all cursor-pointer appearance-none"
                     required
                   >
-                    <option value="Cinematic">Cinematic</option>
-                    <option value="Sci-Fi">Sci-Fi</option>
-                    <option value="Animation">Animation</option>
-                    <option value="Nature">Nature</option>
-                    <option value="Surrealist">Surrealist</option>
+                    {CATEGORIES_LIST.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                   <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-500 dark:text-neutral-400 text-[10px]">
                     ▼
@@ -696,7 +704,7 @@ export default function AdminSeedingPanel({
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
                   <span>Thumbnail URL</span>
-                  <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">Tự động / Tải lên</span>
+                  <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">Auto / Upload</span>
                 </label>
                 <input
                   type="text"
@@ -713,11 +721,11 @@ export default function AdminSeedingPanel({
                     className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Lấy Tự Động</span>
+                    <span>Fetch Auto</span>
                   </button>
                   <label className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5 text-center">
                     <UploadCloud className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
-                    <span>Tải Lên File</span>
+                    <span>Upload File</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -836,16 +844,16 @@ export default function AdminSeedingPanel({
                 <button
                   type="button"
                   onClick={() => {
-                    if (confirm(`Bạn có chắc chắn muốn xóa video này khỏi hệ thống CDN?\n\nTiêu đề: ${selectedVideo.title}`)) {
+                    if (confirm(`Are you sure you want to delete this video from the CDN repository?\n\nTitle: ${selectedVideo.title}`)) {
                       onDeleteVideo(selectedVideo.id);
-                      triggerToast("Đã xóa video thành công!");
+                      triggerToast("Successfully deleted the video!");
                       setSelectedVideoId(videos[0]?.id || "");
                     }
                   }}
                   className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs tracking-wider uppercase py-3.5 px-8 rounded-full flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-lg active:scale-95 border border-rose-500/20"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>Xóa Video Này</span>
+                  <span>Delete This Video</span>
                 </button>
               )}
 
@@ -921,16 +929,16 @@ export default function AdminSeedingPanel({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Bạn có chắc chắn muốn xóa video này khỏi hệ thống CDN?\n\nTiêu đề: ${vid.title}`)) {
+                      if (confirm(`Are you sure you want to delete this video from the CDN repository?\n\nTitle: ${vid.title}`)) {
                         onDeleteVideo(vid.id);
-                        triggerToast("Đã xóa video thành công!");
+                        triggerToast("Successfully deleted the video!");
                         if (vid.id === selectedVideoId) {
                           setSelectedVideoId(videos[0]?.id || "");
                         }
                       }
                     }}
                     className="p-2 text-slate-400 dark:text-neutral-500 hover:text-rose-500 rounded-lg hover:bg-rose-500/10 transition-all cursor-pointer shrink-0"
-                    title="Xóa video"
+                    title="Delete video"
                   >
                     <Trash2 className="w-4 h-4 text-rose-500/80 group-hover:text-rose-500 transition-colors" />
                   </button>

@@ -84,7 +84,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 ADMINISTRATOR AUTHENTICATION
               </span>
               <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">DRM ADMINISTRATION PANEL</h2>
-              <p className="text-xs text-slate-600 dark:text-neutral-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-slate-800 dark:text-neutral-400 mt-1.5 leading-relaxed">
                 Secure content publishing and film stream management area reserved for Videocites Team. Please verify your identity to unlock the console.
               </p>
             </div>
@@ -114,7 +114,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
                 {/* Passcode Input Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono font-bold tracking-wider text-slate-500 dark:text-neutral-400 uppercase block">
+                  <label className="text-[10px] font-mono font-bold tracking-wider text-slate-700 dark:text-neutral-400 uppercase block">
                     SECURITY PASSCODE
                   </label>
                   <div className="relative">
@@ -123,10 +123,10 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                       value={passcode}
                       onChange={(e) => setPasscode(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-center font-mono text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-neutral-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-slate-50 dark:bg-[#050505] border border-slate-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-center font-mono text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-neutral-600 focus:outline-none focus:border-blue-500 transition-colors"
                       required
                     />
-                    <KeyRound className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400 dark:text-neutral-500" />
+                    <KeyRound className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500 dark:text-neutral-500" />
                   </div>
                 </div>
 
@@ -142,7 +142,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 {/* Simulated Biometric Shortcut */}
                 <div className="relative flex py-2 items-center">
                   <div className="flex-grow border-t border-slate-200 dark:border-white/5"></div>
-                  <span className="flex-shrink mx-4 text-[9px] font-mono text-slate-400 dark:text-neutral-500 uppercase tracking-widest">
+                  <span className="flex-shrink mx-4 text-[9px] font-mono text-slate-600 dark:text-neutral-500 uppercase tracking-widest">
                     Or use quick biometric scan
                   </span>
                   <div className="flex-grow border-t border-slate-200 dark:border-white/5"></div>
@@ -151,7 +151,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                 <button
                   type="button"
                   onClick={handleBiometricSimulate}
-                  className="w-full bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-neutral-300 font-bold text-xs py-3 px-6 rounded-xl flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+                  className="w-full bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-neutral-300 font-bold text-xs py-3 px-6 rounded-xl flex items-center justify-center gap-2.5 transition-all cursor-pointer"
                 >
                   <Fingerprint className="w-4 h-4 text-blue-500 dark:text-blue-400 animate-pulse" />
                   Scan Fingerprint / FaceID (Simulated)

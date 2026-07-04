@@ -20,7 +20,7 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
   return (
     <footer className={`w-full border-t font-sans transition-all duration-300 ${
       isLight 
-        ? "bg-slate-50 border-slate-200 text-slate-600 shadow-inner" 
+        ? "bg-slate-50 border-slate-200 text-slate-800 shadow-inner" 
         : "bg-neutral-900 border-neutral-800 text-neutral-400 dark:bg-[#080808] dark:border-neutral-900"
     }`}>
       <div className="max-w-7xl mx-auto px-6 py-16">
@@ -38,12 +38,12 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
               }`}>
                 Videocites<span className="text-amber-500">.</span>
               </span>
-              <p className={`text-xs mt-0.5 font-mono ${isLight ? "text-slate-400" : "text-neutral-500"}`}>ENTERPRISE COPYRIGHT STREAMING</p>
+              <p className={`text-xs mt-0.5 font-mono ${isLight ? "text-slate-600" : "text-neutral-500"}`}>ENTERPRISE COPYRIGHT STREAMING</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4 mt-6 md:mt-0">
-            <span className={`text-xs font-mono ${isLight ? "text-slate-400" : "text-neutral-500"}`}>THEME ENGINE</span>
+            <span className={`text-xs font-mono ${isLight ? "text-slate-600" : "text-neutral-500"}`}>THEME ENGINE</span>
             <button
               onClick={onToggleTheme}
               className={`relative inline-flex h-9 w-20 items-center justify-between rounded-full p-1 cursor-pointer transition-colors border ${
@@ -82,7 +82,7 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
               About Platform
             </h4>
             <p className={`text-xs leading-relaxed transition-colors duration-300 ${
-              isLight ? "text-slate-500" : "text-neutral-400 dark:text-neutral-500"
+              isLight ? "text-slate-700" : "text-neutral-400 dark:text-neutral-500"
             }`}>
               Videocites is an ultra-high definition (UHD/4K) copyrighted video distribution, hosting, and streaming platform. Developed with maximum security architecture, it helps motion picture producers securely control and trace digital broadcast streams.
             </p>
@@ -103,12 +103,12 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
             </h4>
             <ul className="space-y-2.5 text-xs font-sans">
               <li>
-                <button onClick={() => navLinks("home")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-500 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
+                <button onClick={() => navLinks("home")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
                   Copyrighted Video Library
                 </button>
               </li>
               <li>
-                <button onClick={() => navLinks("home")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-500 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
+                <button onClick={() => navLinks("home")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
                   Latest Releases
                 </button>
               </li>
@@ -124,17 +124,17 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
             </h4>
             <ul className="space-y-2.5 text-xs font-sans">
               <li>
-                <button onClick={() => navLinks("legal")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-500 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
+                <button onClick={() => navLinks("legal")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
                   DMCA Takedown Notice
                 </button>
               </li>
               <li>
-                <button onClick={() => navLinks("legal")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-500 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
+                <button onClick={() => navLinks("legal")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
                   Data Privacy Policy
                 </button>
               </li>
               <li>
-                <button onClick={() => navLinks("legal")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-500 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
+                <button onClick={() => navLinks("legal")} className={`hover:text-blue-500 transition-colors cursor-pointer text-left ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-500"}`}>
                   Enterprise Terms of Service
                 </button>
               </li>
@@ -149,7 +149,7 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
               Contact & Headquarters
             </h4>
             <ul className="space-y-3 text-xs">
-              <li className={`flex items-start gap-2.5 ${isLight ? "text-slate-500" : "text-neutral-400 dark:text-neutral-400"}`}>
+              <li className={`flex items-start gap-2.5 ${isLight ? "text-slate-700" : "text-neutral-400 dark:text-neutral-400"}`}>
                 <MapPin className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                 <span>
                   728 Silicon Valley, High-Tech Complex, San Jose City, California, USA.
@@ -157,11 +157,11 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-blue-500 shrink-0" />
-                <a href="mailto:support@videocites.com" className={`hover:text-blue-500 transition-colors ${isLight ? "text-slate-500 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-400"}`}>
+                <a href="mailto:support@videocites.com" className={`hover:text-blue-500 transition-colors ${isLight ? "text-slate-700 hover:text-blue-600" : "text-neutral-400 dark:text-neutral-400"}`}>
                   support@videocites.com
                 </a>
               </li>
-              <li className={`flex items-center gap-2.5 ${isLight ? "text-slate-500" : "text-neutral-400 dark:text-neutral-400"}`}>
+              <li className={`flex items-center gap-2.5 ${isLight ? "text-slate-700" : "text-neutral-400 dark:text-neutral-400"}`}>
                 <Globe className="w-4 h-4 text-blue-500 shrink-0" />
                 <span>Global DRMS Network</span>
               </li>
@@ -173,10 +173,10 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
         <div className={`mt-16 pt-8 border-t text-xs flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors duration-300 ${
           isLight ? "border-slate-200" : "border-neutral-800 dark:border-neutral-900/60"
         }`}>
-          <div className={`font-sans text-center sm:text-left ${isLight ? "text-slate-400" : "text-neutral-500 dark:text-neutral-600"}`}>
-            <span>© 2026 Videocites ID Ltd. All rights reserved.</span>
+          <div className={`font-sans text-center sm:text-left ${isLight ? "text-slate-600" : "text-neutral-500 dark:text-neutral-600"}`}>
+            <span>© 2026 Videocites ID LTD. All rights reserved.</span>
           </div>
-          <div className={`flex gap-6 font-mono text-[11px] ${isLight ? "text-slate-400" : "text-neutral-500 dark:text-neutral-600"}`}>
+          <div className={`flex gap-6 font-mono text-[11px] ${isLight ? "text-slate-600" : "text-neutral-500 dark:text-neutral-600"}`}>
             <span>SECURE MD5 CERTIFIED</span>
             <span>UHD STREAM V2.4</span>
           </div>
