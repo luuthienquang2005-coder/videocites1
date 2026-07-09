@@ -329,6 +329,75 @@ const CAPTION_FALLBACK_TEMPLATES = {
   ]
 };
 
+// Helper to clean up video titles (stripping file extensions, etc)
+export function cleanVideoTitle(title: string): string {
+  if (!title) return "this video";
+  return title
+    .replace(/\.(mp4|mkv|avi|mov|webm)$/i, "")
+    .replace(/\[Official (Video|Audio|Music Video|MV)\]/gi, "")
+    .replace(/\(Official (Video|Audio|Music Video|MV)\)/gi, "")
+    .replace(/\[MV\]/gi, "")
+    .replace(/\(MV\)/gi, "")
+    .replace(/\(Full HD\)/gi, "")
+    .replace(/\(4K\)/gi, "")
+    .replace(/\[4K\]/gi, "")
+    .replace(/\|\s*Videocites/gi, "")
+    .trim();
+}
+
+// Generate a pool of highly contextual, specific templates using the video's title/category
+export function getDynamicContextualComments(video: Video): { vi: string[]; en: string[] } {
+  const cleanTitle = cleanVideoTitle(video.title);
+  const tagsText = video.tags && video.tags.length > 0 ? video.tags.slice(0, 3).join(", ") : video.category;
+
+  const vi = [
+    `Nội dung về "${cleanTitle}" này hay quá, xem đi xem lại vẫn thấy cực kỳ cuốn hút!`,
+    `Đúng là chủ đề mình đang tìm kiếm: "${cleanTitle}". Video giải thích siêu chi tiết luôn, cảm ơn kênh!`,
+    `Cảnh quay và thông tin về "${cleanTitle}" được đầu tư quá công phu, đúng chuẩn chất lượng cao.`,
+    `Phân tích về "${cleanTitle}" rất sâu sắc và có chiều sâu, cực kỳ thuyết phục.`,
+    `Xem xong video về "${cleanTitle}" này thấy hiểu ra nhiều điều, hữu ích dã man!`,
+    `Thích cách tiếp cận vấn đề của video "${cleanTitle}", không bị rập khuôn hay nhàm chán chút nào.`,
+    `Mong chờ kênh làm thêm nhiều video cùng chủ đề như "${cleanTitle}" hoặc về ${tagsText}!`,
+    `Không uổng công click vào xem, nội dung "${cleanTitle}" quá đỉnh, xứng đáng triệu view.`,
+    `Cách trình bày về "${cleanTitle}" rất dễ hiểu, súc tích và mạch lạc ghê.`,
+    `Cảm ơn tác giả đã chia sẻ một sản phẩm xuất sắc như video "${cleanTitle}" này. Đã subscribe!`,
+    `Vừa nghe vừa ngẫm nghĩ về "${cleanTitle}", thấy tác giả nghiên cứu cực kỳ kỹ lưỡng.`,
+    `Những điểm nhấn trong "${cleanTitle}" thực sự đắt giá, khâm phục cách làm nội dung của ê-kíp.`
+  ];
+
+  const en = [
+    `The breakdown of "${cleanTitle}" is absolutely brilliant, learned so much from this!`,
+    `I've been looking for a comprehensive video about "${cleanTitle}" for a long time. This is perfect!`,
+    `The visual and explanation quality in this video about "${cleanTitle}" is top-tier.`,
+    `So well researched! Your analysis of "${cleanTitle}" has some incredible depth.`,
+    `Watching this video about "${cleanTitle}" makes me appreciate your hard work even more.`,
+    `The editing is seamless and the way you presented "${cleanTitle}" is extremely engaging.`,
+    `Such clean presentation and valuable info on "${cleanTitle}". Highly recommended!`,
+    `This deserves millions of views! Exceptional quality on the topic of "${cleanTitle}".`,
+    `I love how simply and beautifully you explained "${cleanTitle}". Subscribed!`,
+    `A masterclass on "${cleanTitle}"! Thanks for sharing this useful content.`,
+    `Everything in this video about "${cleanTitle}" is perfectly structured and clear.`,
+    `A very multi-dimensional perspective on "${cleanTitle}". Amazing work!`
+  ];
+
+  return { vi, en };
+}
+
+// Generate a single random contextual comment
+export function generateSingleContextualComment(video: Video, isVi = false): { authorName: string; authorAvatar: string; content: string } {
+  const selectedUsers = shuffleArray(USER_POOL);
+  const user = selectedUsers[Math.floor(Math.random() * selectedUsers.length)];
+  const pool = getDynamicContextualComments(video);
+  const commentsList = isVi ? pool.vi : pool.en;
+  const content = commentsList[Math.floor(Math.random() * commentsList.length)];
+  
+  return {
+    authorName: user.name,
+    authorAvatar: user.avatar,
+    content
+  };
+}
+
 // Generate 20-30 comments for a given video
 export function generateCommentsForVideo(video: Video, count = 25): VideoComment[] {
   const generated: VideoComment[] = [];
@@ -355,6 +424,11 @@ export function generateCommentsForVideo(video: Video, count = 25): VideoComment
   const categoryGroup = CATEGORY_TEMPLATES[video.category] || CATEGORY_TEMPLATES["Film & Cinema"];
   candidateVi.push(...categoryGroup.vi);
   candidateEn.push(...categoryGroup.en);
+
+  // Add highly contextual title-specific comments
+  const dynamicPool = getDynamicContextualComments(video);
+  candidateVi.push(...dynamicPool.vi);
+  candidateEn.push(...dynamicPool.en);
 
   // If keyword matches exist, prioritize them, but also add caption fallback templates
   candidateVi.push(...CAPTION_FALLBACK_TEMPLATES.vi);
@@ -557,14 +631,64 @@ export function sanitizeAndTranslateComment(comment: any): any {
     "Đọc chú thích chi tiết mới thấy tác giả đầu tư kỹ lưỡng như thế nào.": "Reading the notes shows how much meticulous effort the author invested."
   };
 
+  // Check for dynamic title-specific template translations on the fly
+  let matchedDynamic = false;
+  const lowercaseContent = content.toLowerCase();
+
   if (translationMap[content]) {
     updatedContent = translationMap[content];
   } else {
-    // If it contains Vietnamese diacritics but is not in the translation map,
-    // we can do a fallback or try to strip accents/convert to general English comment
-    const hasViContent = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(content);
-    if (hasViContent) {
-      updatedContent = "I highly appreciate this incredibly well-produced high-definition stream on Videocites!";
+    // Determine the video title context if possible (we can search the content for the quoted substring)
+    const titleMatch = content.match(/"([^"]+)"/);
+    const titleFromCmt = titleMatch ? titleMatch[1] : "";
+
+    if (content.includes("Nội dung về") && content.includes("này hay quá")) {
+      updatedContent = `The breakdown of "${titleFromCmt || "this video"}" is absolutely brilliant, learned so much from this!`;
+      matchedDynamic = true;
+    } else if (content.includes("Đúng là chủ đề mình đang tìm kiếm:")) {
+      updatedContent = `I've been looking for a comprehensive video about "${titleFromCmt || "this topic"}" for a long time. This is perfect!`;
+      matchedDynamic = true;
+    } else if (content.includes("Cảnh quay và thông tin về")) {
+      updatedContent = `The visual and explanation quality in this video about "${titleFromCmt || "this topic"}" is top-tier.`;
+      matchedDynamic = true;
+    } else if (content.includes("Phân tích về") && content.includes("rất sâu sắc")) {
+      updatedContent = `So well researched! Your analysis of "${titleFromCmt || "this topic"}" has some incredible depth.`;
+      matchedDynamic = true;
+    } else if (content.includes("Xem xong video về")) {
+      updatedContent = `Watching this video about "${titleFromCmt || "this topic"}" makes me appreciate your hard work even more.`;
+      matchedDynamic = true;
+    } else if (content.includes("Thích cách tiếp cận vấn đề")) {
+      updatedContent = `The editing is seamless and the way you presented "${titleFromCmt || "this topic"}" is extremely engaging.`;
+      matchedDynamic = true;
+    } else if (content.includes("Mong chờ kênh làm thêm nhiều video cùng chủ đề")) {
+      updatedContent = `Such clean presentation and valuable info on "${titleFromCmt || "this topic"}". Highly recommended!`;
+      matchedDynamic = true;
+    } else if (content.includes("Không uổng công click vào xem")) {
+      updatedContent = `This deserves millions of views! Exceptional quality on the topic of "${titleFromCmt || "this topic"}".`;
+      matchedDynamic = true;
+    } else if (content.includes("Cách trình bày về")) {
+      updatedContent = `I love how simply and beautifully you explained "${titleFromCmt || "this topic"}". Subscribed!`;
+      matchedDynamic = true;
+    } else if (content.includes("Cảm ơn tác giả đã chia sẻ một sản phẩm xuất sắc")) {
+      updatedContent = `A masterclass on "${titleFromCmt || "this video"}"! Thanks for sharing this useful content.`;
+      matchedDynamic = true;
+    } else if (content.includes("Vừa nghe vừa ngẫm nghĩ về")) {
+      updatedContent = `Everything in this video about "${titleFromCmt || "this topic"}" is perfectly structured and clear.`;
+      matchedDynamic = true;
+    } else if (content.includes("Những điểm nhấn trong") && content.includes("thực sự đắt giá")) {
+      updatedContent = `A very multi-dimensional perspective on "${titleFromCmt || "this topic"}". Amazing work!`;
+      matchedDynamic = true;
+    }
+
+    if (!matchedDynamic) {
+      // If it contains Vietnamese diacritics but is not in the translation map,
+      // we can do a fallback or try to strip accents/convert to general English comment
+      const hasViContent = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(content);
+      if (hasViContent) {
+        // Instead of replacing all custom user-authored comments with a generic sentence, 
+        // let's preserve them! This allows user-posted Vietnamese comments to remain fully intact in the UI.
+        updatedContent = content; 
+      }
     }
   }
 

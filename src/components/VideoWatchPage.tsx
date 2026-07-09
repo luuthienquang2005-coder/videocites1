@@ -633,69 +633,10 @@ export default function VideoWatchPage({
                 </div>
               </div>
 
-              {/* Comment Input form with Custom Name */}
-              <form onSubmit={handlePostComment} className="flex flex-col gap-4 bg-slate-100/50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200/80 dark:border-white/10">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* Name Input */}
-                  <div className="sm:w-1/3 space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-neutral-400 uppercase tracking-widest font-mono">
-                      Your name
-                    </label>
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={getAvatarForName(commenterName)}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10 shadow-sm"
-                        referrerPolicy="no-referrer"
-                      />
-                      <input
-                        type="text"
-                        value={commenterName}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCommenterName(val);
-                          safeStorage.setItem("videocites-commenter-name", val);
-                        }}
-                        placeholder="Enter your name..."
-                        required
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 font-sans transition-all font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Comment Content Input */}
-                  <div className="grow space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-neutral-400 uppercase tracking-widest font-mono">
-                      Comment
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={userComment}
-                        onChange={(e) => setUserComment(e.target.value)}
-                        placeholder="Share your thoughts about this video..."
-                        required
-                        className="w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-xl pl-4 pr-12 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 font-sans transition-all"
-                      />
-                      {userComment.trim() && (
-                        <button
-                          type="submit"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 p-2 transition-transform active:scale-95 cursor-pointer flex items-center justify-center"
-                          title="Submit comment"
-                        >
-                          <Send className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </form>
-
               {/* Render local comments list */}
               <div className="space-y-6 pt-2">
                 <AnimatePresence initial={false}>
                   {sortedComments.map((comment) => {
-                    const isReplying = replyingToCommentId === comment.id;
                     const isExpanded = expandedReplies[comment.id];
                     const replyCount = comment.replies?.length || 0;
 
@@ -749,61 +690,7 @@ export default function VideoWatchPage({
                                 <ThumbsDown className="w-3.5 h-3.5" />
                                 <span className="font-mono">{comment.dislikes || 0}</span>
                               </button>
-
-                              {/* Reply Trigger */}
-                              <button
-                                onClick={() => {
-                                  setReplyingToCommentId(isReplying ? null : comment.id);
-                                  setReplyText("");
-                                }}
-                                className="flex items-center gap-1 text-[11px] font-bold text-blue-500/80 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors cursor-pointer uppercase tracking-wider"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                <span>Reply</span>
-                              </button>
                             </div>
-
-                            {/* Inline Reply Input Form */}
-                            <AnimatePresence>
-                              {isReplying && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  className="mt-3 pl-2 border-l-2 border-blue-500/30 overflow-hidden"
-                                >
-                                  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
-                                    <input
-                                      type="text"
-                                      value={commenterName}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        setCommenterName(val);
-                                        safeStorage.setItem("videocites-commenter-name", val);
-                                      }}
-                                      placeholder="Your name..."
-                                      required
-                                      className="sm:w-1/4 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-2.5 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 font-sans font-semibold"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={replyText}
-                                      onChange={(e) => setReplyText(e.target.value)}
-                                      placeholder="Type reply..."
-                                      required
-                                      className="grow bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 font-sans"
-                                    />
-                                    <button
-                                      onClick={() => handlePostReply(comment.id)}
-                                      disabled={!replyText.trim() || !commenterName.trim()}
-                                      className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center shrink-0"
-                                    >
-                                      <Send className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
 
                             {/* Collapsible Replies List */}
                             {replyCount > 0 && (
@@ -865,7 +752,6 @@ export default function VideoWatchPage({
                   })}
                 </AnimatePresence>
               </div>
-
             </div>
 
           </div>

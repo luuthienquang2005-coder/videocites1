@@ -300,6 +300,41 @@ export default function App() {
   // Select current active video object
   const activeVideo = videos.find((v) => v.id === selectedVideoId) || videos[0];
 
+  // Dynamically update document title based on the active view and video
+  useEffect(() => {
+    let title = "Videocites - Premium Video Streaming";
+    switch (currentView) {
+      case "home":
+        title = "Videocites - Premium Video Streaming Platform";
+        break;
+      case "videos":
+        title = "All Secure Videos | Videocites";
+        break;
+      case "watch":
+        if (activeVideo) {
+          title = `${activeVideo.title} | Watch on Videocites`;
+        } else {
+          title = "Watch Premium Video | Videocites";
+        }
+        break;
+      case "login":
+        title = "Admin Secure Login | Videocites";
+        break;
+      case "admin":
+        title = "Admin Seeding Panel & Database Control | Videocites";
+        break;
+      case "legal":
+        title = "DMCA, Copyright Clearance & Legal Policy | Videocites";
+        break;
+      case "contact":
+        title = "Contact Support & Rights Management | Videocites";
+        break;
+      default:
+        title = "Videocites";
+    }
+    document.title = title;
+  }, [currentView, activeVideo]);
+
   return (
     <div className={`min-h-screen font-sans flex flex-col justify-between transition-colors duration-300 ${
       theme === "light" ? "bg-slate-50 text-slate-800" : "bg-[#050505] text-[#E5E5E5]"

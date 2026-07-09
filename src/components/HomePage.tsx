@@ -106,9 +106,9 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
           {/* Unsplash abstract background */}
           <div className="absolute inset-0 z-0">
             <img 
-              src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1600&q=80" 
+              src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1600&q=80" 
               alt="Hero Backdrop"
-              className="w-full h-full object-cover opacity-20 filter blur-sm"
+              className="w-full h-full object-cover opacity-25 filter blur-xs"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-100/90 to-transparent dark:from-[#050505] dark:via-[#050505]/80 dark:to-transparent transition-colors duration-300" />
           </div>

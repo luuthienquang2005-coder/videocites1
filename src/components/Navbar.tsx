@@ -11,7 +11,14 @@ interface NavbarProps {
   onToggleTheme: () => void;
 }
 
-export default function Navbar({ currentView, onNavigate, isAdmin, onLogout, theme, onToggleTheme }: NavbarProps) {
+export default function Navbar({ 
+  currentView, 
+  onNavigate, 
+  isAdmin, 
+  onLogout, 
+  theme, 
+  onToggleTheme
+}: NavbarProps) {
   const isLight = theme === "light";
   
   return (
