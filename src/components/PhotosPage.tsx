@@ -86,7 +86,7 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
               <span>DRM SECURE PHOTO GALLERY</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-              Secure Photos
+              Secure Gallery
               <span className="text-xs font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full">
                 {photos.length} Total
               </span>

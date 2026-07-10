@@ -85,7 +85,7 @@ export default function Navbar({
             }`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
-            <span>Photos</span>
+            <span>Gallery</span>
           </button>
 
           <button
@@ -190,7 +190,7 @@ export default function Navbar({
       }`}>
         <button onClick={() => onNavigate("home")} className={currentView === "home" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>EXPLORE</button>
         <button onClick={() => onNavigate("videos")} className={currentView === "videos" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>VIDEOS</button>
-        <button onClick={() => onNavigate("photos")} className={currentView === "photos" || currentView === "photo-watch" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>PHOTOS</button>
+        <button onClick={() => onNavigate("photos")} className={currentView === "photos" || currentView === "photo-watch" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>GALLERY</button>
         <button onClick={() => onNavigate("legal")} className={currentView === "legal" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>LEGAL</button>
         <button onClick={() => onNavigate("contact")} className={currentView === "contact" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>CONTACT</button>
         {isAdmin && (
