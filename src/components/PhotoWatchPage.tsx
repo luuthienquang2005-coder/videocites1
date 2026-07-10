@@ -238,7 +238,10 @@ export default function PhotoWatchPage({
           <div className="lg:col-span-7 space-y-5">
             
             {/* Cinematic Image Stage */}
-            <div className="relative rounded-2xl overflow-hidden bg-zinc-950 border border-slate-200 dark:border-white/10 group select-none flex items-center justify-center p-2 min-h-[300px] md:min-h-[450px]">
+            <div 
+              className="relative rounded-2xl overflow-hidden bg-zinc-950 border border-slate-200 dark:border-white/10 group select-none flex items-center justify-center p-2 min-h-[300px] md:min-h-[450px]"
+              onContextMenu={(e) => e.preventDefault()}
+            >
               
               {/* Copy Protected Overlay Watermark */}
               <div className="absolute top-4 left-4 z-10 bg-black/70 backdrop-blur px-2.5 py-1 rounded-md text-[9px] font-mono font-black text-blue-400 tracking-wider flex items-center gap-1.5 border border-white/5">
@@ -254,6 +257,7 @@ export default function PhotoWatchPage({
                   isZoomed ? "scale-125 cursor-zoom-out" : "scale-100 cursor-zoom-in"
                 }`}
                 onClick={() => setIsZoomed(!isZoomed)}
+                onContextMenu={(e) => e.preventDefault()}
                 referrerPolicy="no-referrer"
               />
 
@@ -266,15 +270,6 @@ export default function PhotoWatchPage({
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
-                <a 
-                  href={photo.imageUrl} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="p-2 rounded-xl bg-black/80 backdrop-blur text-white hover:bg-blue-500 hover:text-neutral-950 transition-all cursor-pointer flex items-center justify-center"
-                  title="Open source link"
-                >
-                  <Download className="w-4 h-4" />
-                </a>
               </div>
             </div>
 
