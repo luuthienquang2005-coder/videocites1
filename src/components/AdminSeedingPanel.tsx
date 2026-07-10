@@ -815,14 +815,27 @@ export default function AdminSeedingPanel({
                   )}
 
                   {mediaType === "photo" && (
-                    <button
-                      type="button"
-                      onClick={handleAutoGetMedia}
-                      className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                      <span>Fetch Elegant Photo</span>
-                    </button>
+                    activeTab === "edit" ? (
+                      <label className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5 text-center">
+                        <UploadCloud className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleMediaUploadInput}
+                          className="hidden"
+                        />
+                      </label>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleAutoGetMedia}
+                        className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Fetch Elegant Photo</span>
+                      </button>
+                    )
                   )}
                 </div>
               </div>
