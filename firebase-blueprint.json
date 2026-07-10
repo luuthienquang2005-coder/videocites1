@@ -90,6 +90,88 @@
       "required": [
         "comments"
       ]
+    },
+    "Photo": {
+      "title": "Photo",
+      "description": "Information about a high-quality photograph stored in the platform database.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the photo."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the photo."
+        },
+        "description": {
+          "type": "string",
+          "description": "Markdown description of the photo."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Direct URL to the image file."
+        },
+        "author": {
+          "type": "object",
+          "description": "The author / publisher profile details."
+        },
+        "realViews": {
+          "type": "integer",
+          "description": "Current platform views."
+        },
+        "realLikes": {
+          "type": "integer",
+          "description": "Current platform likes."
+        },
+        "realDislikes": {
+          "type": "integer",
+          "description": "Current platform dislikes."
+        },
+        "baseViews": {
+          "type": "integer",
+          "description": "The base view count used to calculate dynamic views."
+        },
+        "baseLikes": {
+          "type": "integer",
+          "description": "The base like count."
+        },
+        "baseDislikes": {
+          "type": "integer",
+          "description": "The base dislike count."
+        },
+        "publishedAt": {
+          "type": "string",
+          "description": "ISO timestamp representing the publication date."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category (e.g. Cinematic, Nature)."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Associated metadata tags."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "imageUrl"
+      ]
+    },
+    "PhotoCommentList": {
+      "title": "PhotoCommentList",
+      "description": "Container for comments associated with a specific photo.",
+      "type": "object",
+      "properties": {
+        "comments": {
+          "type": "array",
+          "description": "List of photo comment objects."
+        }
+      },
+      "required": [
+        "comments"
+      ]
     }
   },
   "firestore": {
@@ -100,6 +182,14 @@
     "/comments/{videoId}": {
       "schema": "VideoCommentList",
       "description": "Comments matching a video by its video ID."
+    },
+    "/photos/{photoId}": {
+      "schema": "Photo",
+      "description": "Collection of all available user-uploaded and default photos."
+    },
+    "/photoComments/{photoId}": {
+      "schema": "PhotoCommentList",
+      "description": "Comments matching a photo by its photo ID."
     }
   }
 }

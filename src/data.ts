@@ -1,4 +1,4 @@
-import { Video, VideoComment } from "./types";
+import { Video, VideoComment, Photo } from "./types";
 
 export const INITIAL_VIDEOS: Video[] = [
   {
@@ -607,3 +607,124 @@ export const MOCK_COMMENTS: Record<string, VideoComment[]> = {
     }
   ]
 };
+
+export const INITIAL_PHOTOS: Photo[] = [
+  {
+    id: "photo-patagonia-summit",
+    title: "Patagonia Granite Peak Sunrise - Visual Perfection",
+    description: `# Majestic Patagonia Summit Sunrise
+This stunning photograph captures the precise moment the morning sun crests the granite peaks of the Patagonia mountain range, casting an ethereal golden glow across the glaciers below.
+
+### Camera Details
+*   **Body:** Hasselblad H6D-100c
+*   **Lens:** HC 35-90mm f/3.5-5.6
+*   **Settings:** 45mm, f/11, 1/15s, ISO 64
+*   **Location:** Mount Fitz Roy, Patagonia, Argentina
+
+*This artwork represents the pinnacle of high-contrast landscapes, perfectly suited for testing micro-LED dynamic ranges.*`,
+    imageUrl: "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=1200&q=80",
+    author: {
+      name: "Aetherial Films",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80",
+      subscribers: 310000,
+      verified: true
+    },
+    realViews: 1045,
+    realLikes: 142,
+    realDislikes: 0,
+    baseViews: 345000,
+    baseLikes: 29400,
+    baseDislikes: 12,
+    publishedAt: "2025-10-15T06:00:00Z",
+    category: "Nature",
+    tags: ["Patagonia", "Mountains", "Hasselblad", "Landscape", "Nature"]
+  },
+  {
+    id: "photo-quantum-circuits",
+    title: "Liquid-Nitrogen Cooled Quantum Computing Core",
+    description: `# Quantum Supercomputing Architecture
+An ultra-high resolution capture of a 128-qubit superconducting quantum computing core, glowing under cryogenic illumination.
+
+### Technical Elements
+*   **Cooling System:** Liquid Helium dilution refrigerator operating at 10mK
+*   **Substrate:** Gold-plated copper waveguides on sapphire chips
+*   **Vibe:** Industrial Cyberpunk & Deep Research
+
+*Captured exclusively for Videocites Tech section under extreme macro lighting.*`,
+    imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+    author: {
+      name: "Neo Amsterdam Studios",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80",
+      subscribers: 890000,
+      verified: true
+    },
+    realViews: 850,
+    realLikes: 98,
+    realDislikes: 1,
+    baseViews: 124500,
+    baseLikes: 8900,
+    baseDislikes: 34,
+    publishedAt: "2025-12-10T14:00:00Z",
+    category: "Tech",
+    tags: ["Quantum", "Hardware", "Cryogenic", "Supercomputer", "Science"]
+  },
+  {
+    id: "photo-hanoi-alleyway",
+    title: "Golden Hour in Hanoi's Historic Old Quarter Alleyways",
+    description: `# Hanoi Golden Hour - Heritage and Life
+A cinematic frame capturing the nostalgic beauty of a narrow Hanoi alleyway at 5:30 PM. Warm light reflects off centuries-old yellow walls, with steam rising from a street-side Pho stall.
+
+### Scene Composition
+*   **Subject:** Traditional street-side dining and motorbikes
+*   **Atmosphere:** Lively, humid, nostalgic, and deeply authentic
+*   **Aesthetic:** Warm shadows, deep yellows, and vibrant greens
+
+*A visual tribute to the timeless culinary and cultural soul of Hanoi.*`,
+    imageUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=80",
+    author: {
+      name: "Vietnamese Food Vlog",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80",
+      subscribers: 560000,
+      verified: true
+    },
+    realViews: 2100,
+    realLikes: 345,
+    realDislikes: 2,
+    baseViews: 294000,
+    baseLikes: 31200,
+    baseDislikes: 104,
+    publishedAt: "2026-02-18T17:30:00Z",
+    category: "Culture",
+    tags: ["Hanoi", "Vietnam", "Travel", "StreetFood", "Cinematic"]
+  },
+  {
+    id: "photo-cyber-neon",
+    title: "Hyper-Neon Tokyo Crossing Frame - Ray Tracing Blueprint",
+    description: `# Tokyo Cyberpunk Grid Reflection
+A stunning visual frame representing the geometric perfection of a rain-soaked Shibuya Crossing, reflecting futuristic commercial holograms and ambient store signs.
+
+### Rendering Details
+*   **Technique:** High-exposure photography processed through local neon-contrast filters
+*   **Inspiration:** Akira & Blade Runner 2049 color gamuts
+*   **Focus:** Perfect wet asphalt reflection matching architectural lines
+
+*Perfect for testing OLED local dimming zones.*`,
+    imageUrl: "https://images.unsplash.com/photo-1540959733332-eab4deceeaf7?auto=format&fit=crop&w=1200&q=80",
+    author: {
+      name: "Blender Cinematic Corp",
+      avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=120&q=80",
+      subscribers: 2450000,
+      verified: true
+    },
+    realViews: 4120,
+    realLikes: 689,
+    realDislikes: 4,
+    baseViews: 840000,
+    baseLikes: 92300,
+    baseDislikes: 245,
+    publishedAt: "2026-03-05T20:00:00Z",
+    category: "Film & Cinema",
+    tags: ["Cyberpunk", "Neon", "Tokyo", "BladeRunner", "RayTracing"]
+  }
+];
+

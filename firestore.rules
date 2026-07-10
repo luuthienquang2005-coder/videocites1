@@ -15,5 +15,15 @@ service cloud.firestore {
     match /comments/{videoId} {
       allow read, write: if true;
     }
+
+    // Anyone can read and write photos
+    match /photos/{photoId} {
+      allow read, write: if true;
+    }
+
+    // Anyone can read and write photo comments
+    match /photoComments/{photoId} {
+      allow read, write: if true;
+    }
   }
 }

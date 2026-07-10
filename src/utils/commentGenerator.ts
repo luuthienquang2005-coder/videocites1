@@ -1,4 +1,4 @@
-import { Video, VideoComment } from "../types";
+import { Video, VideoComment, Photo, PhotoComment } from "../types";
 
 // Realistic names for International commentators
 const USER_POOL = [
@@ -702,3 +702,58 @@ export function sanitizeAndTranslateComment(comment: any): any {
     ...(replies ? { replies } : {})
   };
 }
+
+export function generateCommentsForPhoto(photo: Photo, count = 25): PhotoComment[] {
+  const generated: PhotoComment[] = [];
+  const selectedUsers = shuffleArray(USER_POOL);
+  
+  const photoTemplates = [
+    `The composition of "${photo.title}" is absolutely sublime. The contrast details are mind-blowing!`,
+    `I've been looking for a high-res capture of this subject. Perfect lighting and shadows.`,
+    `The color grading here is phenomenal. Absolutely beautiful shot!`,
+    `Stunning photo! The depth of field highlights the subject perfectly.`,
+    `Amazing image quality! It looks incredibly sharp on my high-res display.`,
+    `This deserves to be framed on a wall. Simply majestic work on "${photo.category}".`,
+    `Perfect exposure! The subtle details in the dark regions are wonderfully preserved.`,
+    `Such an inspiring photograph! Added to my favorites.`,
+    `Beautifully framed. Thanks for sharing this visual masterpiece!`,
+    `Everything in "${photo.title}" is perfectly structured and balanced.`,
+    `The resolution on this is spectacular. You can see every fine detail!`,
+    `Incredible visual storytelling through photography. Simply brilliant.`,
+    `This has such an elegant mood. Excellent choices in color palette.`
+  ];
+
+  const now = new Date("2026-07-04T11:30:00Z");
+  const pubDate = new Date(photo.publishedAt);
+
+  for (let i = 0; i < count; i++) {
+    const user = selectedUsers[i % selectedUsers.length];
+    const content = photoTemplates[Math.floor(Math.random() * photoTemplates.length)];
+
+    const pubTimeMs = pubDate.getTime();
+    const nowMs = now.getTime();
+    const diffMs = Math.max(10 * 60 * 1000, nowMs - pubTimeMs);
+
+    const segmentWidth = diffMs / count;
+    const segmentStart = pubTimeMs + (i * segmentWidth);
+    const randomOffsetInSegment = Math.random() * segmentWidth;
+    const commentDate = new Date(segmentStart + randomOffsetInSegment);
+
+    const ageFactor = (nowMs - commentDate.getTime()) / (24 * 60 * 60 * 1000);
+    const maxLikes = Math.floor(Math.log10(photo.baseViews + 10) * 12);
+    const baseLikes = Math.floor(Math.random() * maxLikes);
+    const likes = Math.floor(baseLikes * (0.3 + 0.7 * Math.min(1, ageFactor)));
+
+    generated.push({
+      id: `generated-photo-cmt-${photo.id}-${i}`,
+      authorName: user.name,
+      authorAvatar: user.avatar,
+      content,
+      createdAt: commentDate.toISOString(),
+      likes
+    });
+  }
+
+  return generated.sort((a, b) => b.likes - a.likes);
+}
+

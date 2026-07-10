@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Video, VideoComment } from "./types";
-import { INITIAL_VIDEOS, MOCK_COMMENTS } from "./data";
+import { Video, VideoComment, Photo, PhotoComment } from "./types";
+import { INITIAL_VIDEOS, MOCK_COMMENTS, INITIAL_PHOTOS } from "./data";
 import Navbar from "./components/Navbar";
 import HomePage from "./components/HomePage";
 import VideoWatchPage from "./components/VideoWatchPage";
+import PhotosPage from "./components/PhotosPage";
+import PhotoWatchPage from "./components/PhotoWatchPage";
 import AdminSeedingPanel from "./components/AdminSeedingPanel";
 import LegalPage from "./components/LegalPage";
 import ContactPage from "./components/ContactPage";
@@ -11,7 +13,7 @@ import MegaFooter from "./components/MegaFooter";
 import AdminLogin from "./components/AdminLogin";
 import VideosPage from "./components/VideosPage";
 import { safeStorage } from "./utils/safeStorage";
-import { generateCommentsForVideo } from "./utils/commentGenerator";
+import { generateCommentsForVideo, generateCommentsForPhoto } from "./utils/commentGenerator";
 import { 
   seedInitialDataIfNeeded, 
   subscribeToVideos, 
@@ -19,28 +21,58 @@ import {
   saveVideoToFirestore, 
   deleteVideoFromFirestore, 
   saveCommentsToFirestore,
-  migrateCommentsInFirestore
+  migrateCommentsInFirestore,
+  subscribeToPhotos,
+  subscribeToPhotoComments,
+  savePhotoToFirestore,
+  deletePhotoFromFirestore,
+  savePhotoCommentsToFirestore,
+  migratePhotoCommentsInFirestore
 } from "./firebase";
 
 export default function App() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  
   const [comments, setComments] = useState<Record<string, VideoComment[]>>({});
+  const [photoComments, setPhotoComments] = useState<Record<string, PhotoComment[]>>({});
+
   const [currentView, setCurrentView] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (window.location.pathname.startsWith("/watch") || params.has("v")) return "watch";
+      if (window.location.pathname.startsWith("/watch") || params.has("v")) {
+        // Distinguish photo-watch from video watch based on pathname
+        if (window.location.pathname.startsWith("/photo")) {
+          return "photo-watch";
+        }
+        return "watch";
+      }
       if (window.location.pathname === "/login" || params.get("page") === "login") return "login";
       return params.get("page") || "home";
     }
     return "home";
   });
+
   const [selectedVideoId, setSelectedVideoId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      return params.get("v") || "videocites-sintel-cinematic";
+      if (!window.location.pathname.startsWith("/photo")) {
+        return params.get("v") || "videocites-sintel-cinematic";
+      }
     }
     return "videocites-sintel-cinematic";
   });
+
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (window.location.pathname.startsWith("/photo")) {
+        return params.get("v") || "videocites-photo-deep-space";
+      }
+    }
+    return "videocites-photo-deep-space";
+  });
+
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     return safeStorage.getItem("videocites-is-admin") === "true";
   });
@@ -69,15 +101,20 @@ export default function App() {
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const videoId = params.get("v");
+      const mediaId = params.get("v");
       const page = params.get("page");
       
       if (window.location.pathname === "/login") {
         setCurrentView("login");
-      } else if (window.location.pathname.startsWith("/watch") || videoId) {
+      } else if (window.location.pathname.startsWith("/photo")) {
+        setCurrentView("photo-watch");
+        if (mediaId) {
+          setSelectedPhotoId(mediaId);
+        }
+      } else if (window.location.pathname.startsWith("/watch") || mediaId) {
         setCurrentView("watch");
-        if (videoId) {
-          setSelectedVideoId(videoId);
+        if (mediaId) {
+          setSelectedVideoId(mediaId);
         }
       } else if (page) {
         setCurrentView(page);
@@ -91,10 +128,12 @@ export default function App() {
   }, []);
 
   // Professional routing handler that updates history state
-  const navigateTo = (view: string, videoId?: string) => {
+  const navigateTo = (view: string, id?: string) => {
     setCurrentView(view);
-    if (videoId) {
-      setSelectedVideoId(videoId);
+    if (view === "watch" && id) {
+      setSelectedVideoId(id);
+    } else if (view === "photo-watch" && id) {
+      setSelectedPhotoId(id);
     }
     
     if (typeof window !== "undefined") {
@@ -102,9 +141,13 @@ export default function App() {
       const params = new URLSearchParams();
       
       if (view === "watch") {
-        const vid = videoId || selectedVideoId || "videocites-sintel-cinematic";
+        const vid = id || selectedVideoId || "videocites-sintel-cinematic";
         params.set("v", vid);
         newUrl = `/watch?${params.toString()}`;
+      } else if (view === "photo-watch") {
+        const pid = id || selectedPhotoId || "videocites-photo-deep-space";
+        params.set("v", pid);
+        newUrl = `/photo?${params.toString()}`;
       } else if (view === "login") {
         newUrl = "/login";
       } else if (view !== "home") {
@@ -124,21 +167,36 @@ export default function App() {
     seedInitialDataIfNeeded();
 
     // Subscribe to all videos dynamically in real-time
-    const unsubscribe = subscribeToVideos((fetchedVideos) => {
+    const unsubscribeVideos = subscribeToVideos((fetchedVideos) => {
       setVideos(fetchedVideos);
 
       // Set default selected video if not specified in URL or not loaded yet
       const params = new URLSearchParams(window.location.search);
       const urlVideoId = params.get("v");
-      if (urlVideoId) {
+      if (urlVideoId && !window.location.pathname.startsWith("/photo")) {
         setSelectedVideoId(urlVideoId);
       } else if (fetchedVideos.length > 0) {
-        // Only set default if selectedVideoId is currently empty
         setSelectedVideoId((prev) => prev || fetchedVideos[0].id);
       }
     });
 
-    return () => unsubscribe();
+    // Subscribe to all photos dynamically in real-time
+    const unsubscribePhotos = subscribeToPhotos((fetchedPhotos) => {
+      setPhotos(fetchedPhotos);
+
+      const params = new URLSearchParams(window.location.search);
+      const urlPhotoId = params.get("v");
+      if (urlPhotoId && window.location.pathname.startsWith("/photo")) {
+        setSelectedPhotoId(urlPhotoId);
+      } else if (fetchedPhotos.length > 0) {
+        setSelectedPhotoId((prev) => prev || fetchedPhotos[0].id);
+      }
+    });
+
+    return () => {
+      unsubscribeVideos();
+      unsubscribePhotos();
+    };
   }, []);
 
   // Listen to comments for the currently active selected video in real-time
@@ -155,6 +213,20 @@ export default function App() {
     return () => unsubscribe();
   }, [selectedVideoId]);
 
+  // Listen to comments for the currently active selected photo in real-time
+  useEffect(() => {
+    if (!selectedPhotoId) return;
+
+    const unsubscribe = subscribeToPhotoComments(selectedPhotoId, (fetchedComments) => {
+      setPhotoComments((prev) => ({
+        ...prev,
+        [selectedPhotoId]: fetchedComments,
+      }));
+    });
+
+    return () => unsubscribe();
+  }, [selectedPhotoId]);
+
   // Protect admin panel by redirecting non-admins to the login page
   useEffect(() => {
     if (currentView === "admin" && !isAdmin) {
@@ -168,14 +240,14 @@ export default function App() {
     navigateTo("home");
   };
 
-  // Update a single video's stats/seedings inside Firestore database
+  // ----------------------------------------------------
+  // VIDEO DATABASE ACTIONS
+  // ----------------------------------------------------
   const handleUpdateVideo = async (updatedVideo: Video, oldId?: string) => {
     try {
       if (oldId && oldId !== updatedVideo.id) {
-        // Delete old video, save updated video
         await deleteVideoFromFirestore(oldId);
         await saveVideoToFirestore(updatedVideo);
-        // Migrate comments to new video ID in Firestore
         await migrateCommentsInFirestore(oldId, updatedVideo.id);
 
         if (selectedVideoId === oldId) {
@@ -192,11 +264,9 @@ export default function App() {
     }
   };
 
-  // Add a newly uploaded video into systemic library
   const handleAddVideo = async (newVideo: Video) => {
     try {
       await saveVideoToFirestore(newVideo);
-      // Auto-generate 20-30 comments based on the video caption/description
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
       const generatedComments = generateCommentsForVideo(newVideo, randomCount);
       await saveCommentsToFirestore(newVideo.id, generatedComments);
@@ -205,7 +275,6 @@ export default function App() {
     }
   };
 
-  // Delete a video from Firestore
   const handleDeleteVideo = async (id: string) => {
     try {
       await deleteVideoFromFirestore(id);
@@ -214,26 +283,81 @@ export default function App() {
     }
   };
 
-  // Reset entire database to default seeding values in Firestore
+  // ----------------------------------------------------
+  // PHOTO DATABASE ACTIONS
+  // ----------------------------------------------------
+  const handleUpdatePhoto = async (updatedPhoto: Photo, oldId?: string) => {
+    try {
+      if (oldId && oldId !== updatedPhoto.id) {
+        await deletePhotoFromFirestore(oldId);
+        await savePhotoToFirestore(updatedPhoto);
+        await migratePhotoCommentsInFirestore(oldId, updatedPhoto.id);
+
+        if (selectedPhotoId === oldId) {
+          setSelectedPhotoId(updatedPhoto.id);
+          if (currentView === "photo-watch") {
+            navigateTo("photo-watch", updatedPhoto.id);
+          }
+        }
+      } else {
+        await savePhotoToFirestore(updatedPhoto);
+      }
+    } catch (e) {
+      console.error("Failed to update photo in Firestore:", e);
+    }
+  };
+
+  const handleAddPhoto = async (newPhoto: Photo) => {
+    try {
+      await savePhotoToFirestore(newPhoto);
+      const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
+      const generatedComments = generateCommentsForPhoto(newPhoto, randomCount);
+      await savePhotoCommentsToFirestore(newPhoto.id, generatedComments);
+    } catch (e) {
+      console.error("Failed to add photo to Firestore:", e);
+    }
+  };
+
+  const handleDeletePhoto = async (id: string) => {
+    try {
+      await deletePhotoFromFirestore(id);
+    } catch (e) {
+      console.error("Failed to delete photo from Firestore:", e);
+    }
+  };
+
+  // Reset entire database helper
   const handleResetDatabase = async () => {
     try {
-      // Re-seed initial data
+      // Re-seed videos
       for (const video of INITIAL_VIDEOS) {
         await saveVideoToFirestore(video);
-        // Generates 20-30 high-quality comments per video
         const randomCount = Math.floor(Math.random() * 11) + 20;
         const generatedComments = generateCommentsForVideo(video, randomCount);
         await saveCommentsToFirestore(video.id, generatedComments);
       }
       const defaultId = INITIAL_VIDEOS[0]?.id || "";
       setSelectedVideoId(defaultId);
+
+      // Re-seed photos
+      for (const photo of INITIAL_PHOTOS) {
+        await savePhotoToFirestore(photo);
+        const randomCount = Math.floor(Math.random() * 11) + 20;
+        const generatedComments = generateCommentsForPhoto(photo, randomCount);
+        await savePhotoCommentsToFirestore(photo.id, generatedComments);
+      }
+      const defaultPhotoId = INITIAL_PHOTOS[0]?.id || "";
+      setSelectedPhotoId(defaultPhotoId);
+
       navigateTo("admin");
     } catch (e) {
       console.error("Failed to reset Firestore database:", e);
     }
   };
 
-  // Add comment dynamically to Firestore database
+  // ----------------------------------------------------
+  // VIDEO COMMENTS & RATINGS ACTIONS
+  // ----------------------------------------------------
   const handleAddComment = async (videoId: string, newComment: VideoComment) => {
     try {
       const currentComments = comments[videoId] || [];
@@ -244,7 +368,6 @@ export default function App() {
     }
   };
 
-  // Update comments (likes, replies, etc.) in Firestore database
   const handleUpdateComments = async (videoId: string, updatedComments: VideoComment[]) => {
     try {
       setComments((prev) => ({
@@ -257,12 +380,11 @@ export default function App() {
     }
   };
 
-  // Increment real views when selecting video
   const handleSelectVideo = (id: string) => {
     navigateTo("watch", id);
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    // Simulate real watch incrementing real views
+    // Increment real views
     const target = videos.find((v) => v.id === id);
     if (target) {
       const updated: Video = {
@@ -273,7 +395,6 @@ export default function App() {
     }
   };
 
-  // Handle Likes increments dynamically from watch page
   const handleLikeVideo = (id: string) => {
     const target = videos.find((v) => v.id === id);
     if (target) {
@@ -285,7 +406,6 @@ export default function App() {
     }
   };
 
-  // Handle Dislikes increments
   const handleDislikeVideo = (id: string) => {
     const target = videos.find((v) => v.id === id);
     if (target) {
@@ -297,28 +417,101 @@ export default function App() {
     }
   };
 
-  // Select current active video object
-  const activeVideo = videos.find((v) => v.id === selectedVideoId) || videos[0];
+  // ----------------------------------------------------
+  // PHOTO COMMENTS & RATINGS ACTIONS
+  // ----------------------------------------------------
+  const handleAddPhotoComment = async (photoId: string, newComment: PhotoComment) => {
+    try {
+      const currentComments = photoComments[photoId] || [];
+      const updatedComments = [newComment, ...currentComments];
+      await savePhotoCommentsToFirestore(photoId, updatedComments);
+    } catch (e) {
+      console.error("Failed to post photo comment to Firestore:", e);
+    }
+  };
 
-  // Dynamically update document title based on the active view and video
+  const handleUpdatePhotoComments = async (photoId: string, updatedComments: PhotoComment[]) => {
+    try {
+      setPhotoComments((prev) => ({
+        ...prev,
+        [photoId]: updatedComments,
+      }));
+      await savePhotoCommentsToFirestore(photoId, updatedComments);
+    } catch (e) {
+      console.error("Failed to update photo comments in Firestore:", e);
+    }
+  };
+
+  const handleSelectPhoto = (id: string) => {
+    navigateTo("photo-watch", id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Increment real views
+    const target = photos.find((p) => p.id === id);
+    if (target) {
+      const updated: Photo = {
+        ...target,
+        realViews: target.realViews + 1,
+      };
+      handleUpdatePhoto(updated);
+    }
+  };
+
+  const handleLikePhoto = (id: string) => {
+    const target = photos.find((p) => p.id === id);
+    if (target) {
+      const updated: Photo = {
+        ...target,
+        realLikes: target.realLikes + 1,
+      };
+      handleUpdatePhoto(updated);
+    }
+  };
+
+  const handleDislikePhoto = (id: string) => {
+    const target = photos.find((p) => p.id === id);
+    if (target) {
+      const updated: Photo = {
+        ...target,
+        realDislikes: target.realDislikes + 1,
+      };
+      handleUpdatePhoto(updated);
+    }
+  };
+
+  // Currently active video & photo objects
+  const activeVideo = videos.find((v) => v.id === selectedVideoId) || videos[0];
+  const activePhoto = photos.find((p) => p.id === selectedPhotoId) || photos[0];
+
+  // Dynamically update document titles (Request 3)
   useEffect(() => {
-    let title = "Videocites - Premium Video Streaming";
+    let title = "Videocites - Premium Media Streaming";
     switch (currentView) {
       case "home":
-        title = "Videocites - Premium Video Streaming Platform";
+        title = "Videocites - Premium Content Registry";
         break;
       case "videos":
         title = "All Secure Videos | Videocites";
         break;
+      case "photos":
+        title = "Art Photography Gallery | Videocites";
+        break;
       case "watch":
         if (activeVideo) {
-          title = `${activeVideo.title} | Watch on Videocites`;
+          title = `${activeVideo.title} | Watch Video on Videocites`;
         } else {
-          title = "Watch Premium Video | Videocites";
+          title = "Watch Secure Stream | Videocites";
+        }
+        break;
+      case "photo-watch":
+        if (activePhoto) {
+          title = `${activePhoto.title} | View Artwork on Videocites`;
+        } else {
+          title = "View Secure Artwork | Videocites";
         }
         break;
       case "login":
-        title = "Admin Secure Login | Videocites";
+        title = "Secure Portal Access | Videocites";
         break;
       case "admin":
         title = "Admin Seeding Panel & Database Control | Videocites";
@@ -333,7 +526,7 @@ export default function App() {
         title = "Videocites";
     }
     document.title = title;
-  }, [currentView, activeVideo]);
+  }, [currentView, activeVideo, activePhoto]);
 
   return (
     <div className={`min-h-screen font-sans flex flex-col justify-between transition-colors duration-300 ${
@@ -369,6 +562,14 @@ export default function App() {
           />
         )}
 
+        {currentView === "photos" && photos.length > 0 && (
+          <PhotosPage
+            photos={photos}
+            onSelectPhoto={handleSelectPhoto}
+            isAdmin={isAdmin}
+          />
+        )}
+
         {currentView === "watch" && activeVideo && (
           <VideoWatchPage
             video={activeVideo}
@@ -379,6 +580,19 @@ export default function App() {
             onDislikeVideo={handleDislikeVideo}
             onAddComment={handleAddComment}
             onUpdateComments={handleUpdateComments}
+          />
+        )}
+
+        {currentView === "photo-watch" && activePhoto && (
+          <PhotoWatchPage
+            photo={activePhoto}
+            suggestedPhotos={photos.filter((p) => p.id !== activePhoto.id)}
+            comments={photoComments[activePhoto.id] || []}
+            onSelectPhoto={handleSelectPhoto}
+            onLikePhoto={handleLikePhoto}
+            onDislikePhoto={handleDislikePhoto}
+            onAddComment={handleAddPhotoComment}
+            onUpdateComments={handleUpdatePhotoComments}
           />
         )}
 
@@ -396,6 +610,10 @@ export default function App() {
             onUpdateVideo={handleUpdateVideo}
             onAddVideo={handleAddVideo}
             onDeleteVideo={handleDeleteVideo}
+            photos={photos}
+            onUpdatePhoto={handleUpdatePhoto}
+            onAddPhoto={handleAddPhoto}
+            onDeletePhoto={handleDeletePhoto}
             onResetDatabase={handleResetDatabase}
           />
         )}

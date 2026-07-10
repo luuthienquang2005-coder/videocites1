@@ -42,3 +42,39 @@ export interface VideoComment {
   dislikes?: number;
   replies?: VideoComment[];
 }
+
+export interface Photo {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  author: Author;
+  
+  // Real stats
+  realViews: number;
+  realLikes: number;
+  realDislikes: number;
+  
+  // Seeding (Fake) values configured by admin
+  baseViews: number;
+  baseLikes: number;
+  baseDislikes: number;
+  
+  // Publish dates
+  publishedAt: string;
+  backdatedDate?: string;
+  
+  category: string;
+  tags: string[];
+}
+
+export interface PhotoComment {
+  id: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  createdAt: string;
+  likes: number;
+  dislikes?: number;
+  replies?: PhotoComment[];
+}

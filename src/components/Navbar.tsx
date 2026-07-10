@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Compass, ShieldAlert, Award, MessageSquare, ShieldCheck, Lock, Unlock, LogOut, Sun, Moon, Film } from "lucide-react";
+import { Sparkles, Compass, ShieldAlert, Award, MessageSquare, ShieldCheck, Lock, Unlock, LogOut, Sun, Moon, Film, Image as ImageIcon } from "lucide-react";
 import Logo from "./Logo";
 
 interface NavbarProps {
@@ -74,6 +74,18 @@ export default function Navbar({
           >
             <Film className="w-3.5 h-3.5" />
             <span>Videos</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate("photos")}
+            className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+              currentView === "photos" || currentView === "photo-watch"
+                ? isLight ? "text-blue-600 bg-blue-500/10" : "text-blue-400 bg-blue-500/10"
+                : isLight ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100" : "text-neutral-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>Photos</span>
           </button>
 
           <button
@@ -178,6 +190,7 @@ export default function Navbar({
       }`}>
         <button onClick={() => onNavigate("home")} className={currentView === "home" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>EXPLORE</button>
         <button onClick={() => onNavigate("videos")} className={currentView === "videos" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>VIDEOS</button>
+        <button onClick={() => onNavigate("photos")} className={currentView === "photos" || currentView === "photo-watch" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>PHOTOS</button>
         <button onClick={() => onNavigate("legal")} className={currentView === "legal" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>LEGAL</button>
         <button onClick={() => onNavigate("contact")} className={currentView === "contact" ? isLight ? "text-blue-600" : "text-blue-400" : ""}>CONTACT</button>
         {isAdmin && (

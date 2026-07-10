@@ -9,9 +9,9 @@ import {
   getDocs,
   writeBatch
 } from "firebase/firestore";
-import { Video, VideoComment } from "./types";
-import { INITIAL_VIDEOS, MOCK_COMMENTS } from "./data";
-import { generateCommentsForVideo } from "./utils/commentGenerator";
+import { Video, VideoComment, Photo, PhotoComment } from "./types";
+import { INITIAL_VIDEOS, MOCK_COMMENTS, INITIAL_PHOTOS } from "./data";
+import { generateCommentsForVideo, generateCommentsForPhoto } from "./utils/commentGenerator";
 
 // Load configuration from firebase-applet-config.json
 import firebaseConfig from "../firebase-applet-config.json";
@@ -161,6 +161,64 @@ export async function seedInitialDataIfNeeded() {
         console.log("Firestore already fully synchronized and populated with comments.");
       }
     }
+
+    // --- PHOTO SEEDING PORTION ---
+    const photosCol = collection(db, "photos");
+    const photoSnapshot = await getDocs(photosCol);
+    const existingPhotoIds = new Set<string>();
+    photoSnapshot.forEach((doc) => {
+      existingPhotoIds.add(doc.id);
+    });
+
+    if (photoSnapshot.empty) {
+      console.log("Firestore photos collection is empty, seeding initial photos...");
+      for (const photo of INITIAL_PHOTOS) {
+        await setDoc(doc(db, "photos", photo.id), photo);
+        const randomCount = Math.floor(Math.random() * 11) + 20;
+        const commentList = generateCommentsForPhoto(photo, randomCount);
+        await setDoc(doc(db, "photoComments", photo.id), { comments: commentList });
+      }
+      console.log("Firestore photo seeding completed successfully.");
+    } else {
+      let addedPhotos = 0;
+      for (const photo of INITIAL_PHOTOS) {
+        if (!existingPhotoIds.has(photo.id)) {
+          await setDoc(doc(db, "photos", photo.id), photo);
+          const randomCount = Math.floor(Math.random() * 11) + 20;
+          const commentList = generateCommentsForPhoto(photo, randomCount);
+          await setDoc(doc(db, "photoComments", photo.id), { comments: commentList });
+          addedPhotos++;
+        }
+      }
+      
+      const photoCommentsCol = collection(db, "photoComments");
+      const photoCommentsSnapshot = await getDocs(photoCommentsCol);
+      const photoCommentsMap = new Map<string, PhotoComment[]>();
+      photoCommentsSnapshot.forEach((doc) => {
+        photoCommentsMap.set(doc.id, doc.data().comments || []);
+      });
+
+      const latestPhotosSnapshot = await getDocs(photosCol);
+      const allPhotos: Photo[] = [];
+      latestPhotosSnapshot.forEach((doc) => {
+        allPhotos.push(doc.data() as Photo);
+      });
+
+      let autoPopulatedPhotoComments = 0;
+      for (const photo of allPhotos) {
+        const existingComments = photoCommentsMap.get(photo.id) || [];
+        if (existingComments.length < 20) {
+          const randomCount = Math.floor(Math.random() * 11) + 20;
+          const generated = generateCommentsForPhoto(photo, randomCount);
+          await setDoc(doc(db, "photoComments", photo.id), { comments: generated });
+          autoPopulatedPhotoComments++;
+        }
+      }
+      if (addedPhotos > 0 || autoPopulatedPhotoComments > 0) {
+        console.log(`Incremental photo seeding completed. Added ${addedPhotos} photos and backfilled comments for ${autoPopulatedPhotoComments} photos.`);
+      }
+    }
+
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -246,3 +304,83 @@ export async function migrateCommentsInFirestore(oldId: string, newId: string) {
     handleFirestoreError(error, OperationType.WRITE, `comments/${newId}`);
   }
 }
+
+// Subscribe to all photos in real-time
+export function subscribeToPhotos(onUpdate: (photos: Photo[]) => void) {
+  const photosCol = collection(db, "photos");
+  return onSnapshot(photosCol, (snapshot) => {
+    const list: Photo[] = [];
+    snapshot.forEach((doc) => {
+      list.push(doc.data() as Photo);
+    });
+    list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+    onUpdate(list);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, "photos");
+  });
+}
+
+// Subscribe to photo comments in real-time
+export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: PhotoComment[]) => void) {
+  const commentPath = `photoComments/${photoId}`;
+  const commentDoc = doc(db, "photoComments", photoId);
+  return onSnapshot(commentDoc, (snapshot) => {
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      onUpdate(data.comments || []);
+    } else {
+      onUpdate([]);
+    }
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, commentPath);
+  });
+}
+
+// Save a photo to Firestore
+export async function savePhotoToFirestore(photo: Photo) {
+  const photoPath = `photos/${photo.id}`;
+  try {
+    await setDoc(doc(db, "photos", photo.id), photo);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, photoPath);
+  }
+}
+
+// Delete a photo and its comments
+export async function deletePhotoFromFirestore(photoId: string) {
+  try {
+    await deleteDoc(doc(db, "photos", photoId));
+    await deleteDoc(doc(db, "photoComments", photoId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `photos/${photoId}`);
+  }
+}
+
+// Save photo comments
+export async function savePhotoCommentsToFirestore(photoId: string, comments: PhotoComment[]) {
+  const commentPath = `photoComments/${photoId}`;
+  try {
+    await setDoc(doc(db, "photoComments", photoId), { comments });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, commentPath);
+  }
+}
+
+// Migrate photo comments when photo ID changes
+export async function migratePhotoCommentsInFirestore(oldId: string, newId: string) {
+  try {
+    const oldCommentDoc = doc(db, "photoComments", oldId);
+    const newCommentDoc = doc(db, "photoComments", newId);
+    
+    const snapshot = await getDocs(collection(db, "photoComments"));
+    const oldCommentsData = snapshot.docs.find(d => d.id === oldId)?.data();
+    
+    if (oldCommentsData) {
+      await setDoc(newCommentDoc, oldCommentsData);
+      await deleteDoc(oldCommentDoc);
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `photoComments/${newId}`);
+  }
+}
+
