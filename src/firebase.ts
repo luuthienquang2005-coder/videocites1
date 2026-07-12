@@ -4,6 +4,7 @@ import {
   collection, 
   doc, 
   setDoc, 
+  getDoc,
   deleteDoc, 
   onSnapshot,
   getDocs,
@@ -146,7 +147,7 @@ export async function seedInitialDataIfNeeded() {
       let autoPopulatedCommentsCount = 0;
       for (const video of allVideos) {
         const existingComments = commentsMap.get(video.id) || [];
-        if (existingComments.length < 20) {
+        if (existingComments.length === 0) {
           // Automatically generate 20-30 comments based on caption/description/tags
           const randomCount = Math.floor(Math.random() * 11) + 20;
           const generated = generateCommentsForVideo(video, randomCount);
@@ -207,7 +208,7 @@ export async function seedInitialDataIfNeeded() {
       let autoPopulatedPhotoComments = 0;
       for (const photo of allPhotos) {
         const existingComments = photoCommentsMap.get(photo.id) || [];
-        if (existingComments.length < 20) {
+        if (existingComments.length === 0) {
           const randomCount = Math.floor(Math.random() * 11) + 20;
           const generated = generateCommentsForPhoto(photo, randomCount);
           await setDoc(doc(db, "photoComments", photo.id), { comments: generated });
@@ -255,6 +256,34 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
   }, (error) => {
     handleFirestoreError(error, OperationType.GET, commentPath);
   });
+}
+
+// Fetch a single video from Firestore
+export async function getVideoFromFirestore(videoId: string): Promise<Video | null> {
+  try {
+    const docSnap = await getDoc(doc(db, "videos", videoId));
+    if (docSnap.exists()) {
+      return docSnap.data() as Video;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `videos/${videoId}`);
+    return null;
+  }
+}
+
+// Fetch a single photo from Firestore
+export async function getPhotoFromFirestore(photoId: string): Promise<Photo | null> {
+  try {
+    const docSnap = await getDoc(doc(db, "photos", photoId));
+    if (docSnap.exists()) {
+      return docSnap.data() as Photo;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `photos/${photoId}`);
+    return null;
+  }
 }
 
 // Add or update a video in Firestore

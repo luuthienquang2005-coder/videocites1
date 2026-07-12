@@ -27,7 +27,9 @@ import {
   savePhotoToFirestore,
   deletePhotoFromFirestore,
   savePhotoCommentsToFirestore,
-  migratePhotoCommentsInFirestore
+  migratePhotoCommentsInFirestore,
+  getVideoFromFirestore,
+  getPhotoFromFirestore
 } from "./firebase";
 
 export default function App() {
@@ -245,10 +247,24 @@ export default function App() {
   // ----------------------------------------------------
   const handleUpdateVideo = async (updatedVideo: Video, oldId?: string) => {
     try {
+      let finalVideo = { ...updatedVideo };
+      
+      if (oldId) {
+        // Fetch latest stats from Firestore so they are preserved
+        const idToFetch = oldId !== updatedVideo.id ? oldId : updatedVideo.id;
+        const latestDoc = await getVideoFromFirestore(idToFetch);
+        if (latestDoc) {
+          finalVideo.realViews = latestDoc.realViews ?? 0;
+          finalVideo.realLikes = latestDoc.realLikes ?? 0;
+          finalVideo.realDislikes = latestDoc.realDislikes ?? 0;
+        }
+      }
+
       if (oldId && oldId !== updatedVideo.id) {
-        await deleteVideoFromFirestore(oldId);
-        await saveVideoToFirestore(updatedVideo);
+        // Migrate comments first so they are not deleted by deleteVideoFromFirestore
         await migrateCommentsInFirestore(oldId, updatedVideo.id);
+        await deleteVideoFromFirestore(oldId);
+        await saveVideoToFirestore(finalVideo);
 
         if (selectedVideoId === oldId) {
           setSelectedVideoId(updatedVideo.id);
@@ -257,7 +273,7 @@ export default function App() {
           }
         }
       } else {
-        await saveVideoToFirestore(updatedVideo);
+        await saveVideoToFirestore(finalVideo);
       }
     } catch (e) {
       console.error("Failed to update video in Firestore:", e);
@@ -288,10 +304,24 @@ export default function App() {
   // ----------------------------------------------------
   const handleUpdatePhoto = async (updatedPhoto: Photo, oldId?: string) => {
     try {
+      let finalPhoto = { ...updatedPhoto };
+      
+      if (oldId) {
+        // Fetch latest stats from Firestore so they are preserved
+        const idToFetch = oldId !== updatedPhoto.id ? oldId : updatedPhoto.id;
+        const latestDoc = await getPhotoFromFirestore(idToFetch);
+        if (latestDoc) {
+          finalPhoto.realViews = latestDoc.realViews ?? 0;
+          finalPhoto.realLikes = latestDoc.realLikes ?? 0;
+          finalPhoto.realDislikes = latestDoc.realDislikes ?? 0;
+        }
+      }
+
       if (oldId && oldId !== updatedPhoto.id) {
-        await deletePhotoFromFirestore(oldId);
-        await savePhotoToFirestore(updatedPhoto);
+        // Migrate photo comments first so they are not deleted by deletePhotoFromFirestore
         await migratePhotoCommentsInFirestore(oldId, updatedPhoto.id);
+        await deletePhotoFromFirestore(oldId);
+        await savePhotoToFirestore(finalPhoto);
 
         if (selectedPhotoId === oldId) {
           setSelectedPhotoId(updatedPhoto.id);
@@ -300,7 +330,7 @@ export default function App() {
           }
         }
       } else {
-        await savePhotoToFirestore(updatedPhoto);
+        await savePhotoToFirestore(finalPhoto);
       }
     } catch (e) {
       console.error("Failed to update photo in Firestore:", e);
