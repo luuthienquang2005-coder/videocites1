@@ -31,7 +31,7 @@ import {
   getVideoFromFirestore,
   getPhotoFromFirestore,
   addFirestoreStatusListener
-} from "./firebase";
+} from "./dbService";
 
 export default function App() {
   const [videos, setVideos] = useState<Video[]>([]);

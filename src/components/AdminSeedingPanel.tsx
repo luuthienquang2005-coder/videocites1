@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Video, Photo } from "../types";
 import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
-import { uploadFileToStorage } from "../firebase";
+import { uploadFileToStorage } from "../dbService";
 import { 
   Plus, Eye, ThumbsUp, Calendar, UploadCloud, 
   CheckCircle, Database, RefreshCw, Trash2, FileVideo, 
