@@ -14,8 +14,8 @@ async function startServer() {
     next();
   });
 
-  // Ensure uploads directory exists
-  const uploadDir = path.join(process.cwd(), "uploads");
+  // Ensure uploads directory exists - Use /tmp/uploads for write access in Cloud Run's read-only filesystem
+  const uploadDir = path.join("/tmp", "uploads");
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
