@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Video, Photo } from "../types";
 import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
+import { uploadFileToStorage } from "../firebase";
 import { 
   Plus, Eye, ThumbsUp, Calendar, UploadCloud, 
   CheckCircle, Database, RefreshCw, Trash2, FileVideo, 
@@ -202,30 +203,24 @@ export default function AdminSeedingPanel({
   };
 
   const uploadFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    
     try {
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "_");
+      const path = `uploads/${mediaType}/${Date.now()}-${cleanFileName}`;
+      setUploadProgress(0);
+      
+      const url = await uploadFileToStorage(file, path, (progress) => {
+        setUploadProgress(progress);
       });
       
-      if (!response.ok) {
-        let details = "Unknown error";
-        try {
-          const errData = await response.json();
-          details = errData.error || errData.message || JSON.stringify(errData);
-        } catch {
-          details = await response.text().catch(() => "Unknown error");
-        }
-        throw new Error(`Status ${response.status} (${response.statusText}): ${details}`);
-      }
+      // Delay clearing progress bar briefly for a satisfying completion feel
+      setTimeout(() => {
+        setUploadProgress(null);
+      }, 600);
       
-      const data = await response.json();
-      return data.url;
+      return url;
     } catch (e: any) {
-      throw new Error(e.message || "Network error");
+      setUploadProgress(null);
+      throw new Error(e.message || "Network error uploading to Firebase Storage");
     }
   };
 
@@ -247,7 +242,7 @@ export default function AdminSeedingPanel({
 
     // Drag-drop image vs video loading
     if (mediaType === "photo") {
-      triggerToast("Uploading photo, please wait...");
+      triggerToast("Uploading photo to Firebase Storage, please wait...");
       uploadFile(file).then((url) => {
         setMediaUrl(url);
         setTitle(cleanName);
@@ -289,24 +284,27 @@ export default function AdminSeedingPanel({
       console.error("File duration extraction error", err);
     }
 
-    setUploadProgress(0);
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev === null) return 0;
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setUploadProgress(null);
-            setTitle(cleanName);
-            setDuration(finalDuration);
-            setDescription(`### ${cleanName}\n\nThis video was successfully uploaded via the secure CDN drag-and-drop panel.\n\n- **File Name:** ${file.name}\n- **Format:** High Definition Web-optimized stream\n- **License Identifier:** VIDEOCITES-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
-            triggerToast("DRM Stream created and metadata extracted!");
-          }, 600);
-          return 100;
+    triggerToast("Uploading video to Firebase Storage, please wait...");
+    uploadFile(file).then((url) => {
+      setMediaUrl(url);
+      setTitle(cleanName);
+      setDuration(finalDuration);
+      setDescription(`### ${cleanName}\n\nThis video was successfully uploaded via the secure CDN drag-and-drop panel.\n\n- **File Name:** ${file.name}\n- **Format:** High Definition Web-optimized stream\n- **License Identifier:** VIDEOCITES-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
+      triggerToast("DRM Stream created and video uploaded successfully!");
+    }).catch((err: any) => {
+      console.error("Upload error:", err);
+      triggerToast(`Upload failed: ${err.message || err}. Falling back to local preview.`);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setMediaUrl(reader.result);
+          setTitle(cleanName);
+          setDuration(finalDuration);
+          setDescription(`### ${cleanName}\n\nThis video is loaded locally.\n\n- **File Name:** ${file.name}\n- **Format:** High Definition Web-optimized stream\n- **License Identifier:** VIDEOCITES-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
         }
-        return prev + 10;
-      });
-    }, 150);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleDrop = (e: React.DragEvent) => {

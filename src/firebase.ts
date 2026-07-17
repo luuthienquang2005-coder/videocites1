@@ -10,6 +10,12 @@ import {
   getDocs,
   writeBatch
 } from "firebase/firestore";
+import { 
+  getStorage, 
+  ref, 
+  uploadBytesResumable, 
+  getDownloadURL 
+} from "firebase/storage";
 import { Video, VideoComment, Photo, PhotoComment } from "./types";
 import { INITIAL_VIDEOS, MOCK_COMMENTS, INITIAL_PHOTOS } from "./data";
 import { generateCommentsForVideo, generateCommentsForPhoto } from "./utils/commentGenerator";
@@ -25,6 +31,44 @@ export const db = getFirestore(
   app, 
   firebaseConfig.firestoreDatabaseId || "(default)"
 );
+
+// Initialize Firebase Storage
+export const storage = getStorage(app);
+
+// Helper to upload files directly to Firebase Storage with optional progress reporting
+export function uploadFileToStorage(
+  file: File, 
+  path: string, 
+  onProgress?: (progress: number) => void
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const storageRef = ref(storage, path);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        if (onProgress) {
+          onProgress(Math.round(progress));
+        }
+      },
+      (error) => {
+        console.error("Firebase Storage Upload Error:", error);
+        reject(error);
+      },
+      async () => {
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        } catch (err) {
+          console.error("Firebase Storage getDownloadURL Error:", err);
+          reject(err);
+        }
+      }
+    );
+  });
+}
 
 console.log("Firebase initialized with project:", firebaseConfig.projectId, "and DB:", firebaseConfig.firestoreDatabaseId);
 
