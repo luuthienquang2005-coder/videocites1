@@ -201,6 +201,23 @@ export default function AdminSeedingPanel({
     }
   };
 
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error("Failed to upload file");
+    }
+    
+    const data = await response.json();
+    return data.url;
+  };
+
   const processFile = (file: File) => {
     if (!file) return;
 
@@ -219,16 +236,25 @@ export default function AdminSeedingPanel({
 
     // Drag-drop image vs video loading
     if (mediaType === "photo") {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          setMediaUrl(reader.result);
-          setTitle(cleanName);
-          setDescription(`### ${cleanName}\n\nThis photo was uploaded via the secure CDN drag-and-drop panel.\n\n- **File Name:** ${file.name}\n- **Format:** Image Render asset\n- **License:** VIDEOCITES-PHOTO-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
-          triggerToast("Successfully loaded and processed photo attachment!");
-        }
-      };
-      reader.readAsDataURL(file);
+      triggerToast("Uploading photo, please wait...");
+      uploadFile(file).then((url) => {
+        setMediaUrl(url);
+        setTitle(cleanName);
+        setDescription(`### ${cleanName}\n\nThis photo was uploaded via the secure CDN drag-and-drop panel.\n\n- **File Name:** ${file.name}\n- **Format:** Image Render asset\n- **License:** VIDEOCITES-PHOTO-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
+        triggerToast("Successfully uploaded and processed photo!");
+      }).catch((err) => {
+        console.error("Upload error:", err);
+        triggerToast("Upload failed, falling back to local memory preview.");
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") {
+            setMediaUrl(reader.result);
+            setTitle(cleanName);
+            setDescription(`### ${cleanName}\n\nThis photo was uploaded via the secure CDN drag-and-drop panel.\n\n- **File Name:** ${file.name}\n- **Format:** Image Render asset\n- **License:** VIDEOCITES-PHOTO-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
       return;
     }
 
@@ -340,21 +366,33 @@ export default function AdminSeedingPanel({
     triggerToast(`Fetched elegant photography representation from Unsplash!`);
   };
 
-  const handleMediaUploadInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUploadInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          if (mediaType === "video") {
-            setThumbnailUrl(reader.result);
-          } else {
-            setMediaUrl(reader.result);
-          }
-          triggerToast("Successfully uploaded media image!");
+      try {
+        triggerToast("Uploading image, please wait...");
+        const url = await uploadFile(file);
+        if (mediaType === "video") {
+          setThumbnailUrl(url);
+        } else {
+          setMediaUrl(url);
         }
-      };
-      reader.readAsDataURL(file);
+        triggerToast("Successfully uploaded image!");
+      } catch (err) {
+        console.error("Upload error:", err);
+        triggerToast("Upload failed! Falling back to local preview.");
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") {
+            if (mediaType === "video") {
+              setThumbnailUrl(reader.result);
+            } else {
+              setMediaUrl(reader.result);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -815,7 +853,7 @@ export default function AdminSeedingPanel({
                   )}
 
                   {mediaType === "photo" && (
-                    activeTab === "edit" ? (
+                    <>
                       <label className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5 text-center">
                         <UploadCloud className="w-3.5 h-3.5 text-blue-500" />
                         <span>Upload Photo</span>
@@ -826,16 +864,15 @@ export default function AdminSeedingPanel({
                           className="hidden"
                         />
                       </label>
-                    ) : (
                       <button
                         type="button"
                         onClick={handleAutoGetMedia}
                         className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                        <span>Fetch Elegant Photo</span>
+                        <span>Fetch Auto</span>
                       </button>
-                    )
+                    </>
                   )}
                 </div>
               </div>
@@ -859,7 +896,7 @@ export default function AdminSeedingPanel({
             </div>
 
             {/* ROW 2: Author Name, Category & Video Thumbnail URL (Video Only) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 ${mediaType === "video" ? "md:grid-cols-3" : "md:grid-cols-2"} gap-6`}>
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide">
                   Author
@@ -895,7 +932,7 @@ export default function AdminSeedingPanel({
                 </div>
               </div>
 
-              {mediaType === "video" ? (
+              {mediaType === "video" && (
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
                     <span>Thumbnail URL</span>
@@ -929,22 +966,6 @@ export default function AdminSeedingPanel({
                       />
                     </label>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide">
-                    File Upload Utility
-                  </label>
-                  <label className="w-full h-[45px] bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1c1c1c] border border-slate-200 dark:border-white/10 rounded-xl px-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 dark:text-neutral-300 transition-all cursor-pointer">
-                    <UploadCloud className="w-4 h-4 text-blue-500 animate-pulse" />
-                    <span>Upload Image Attachment</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleMediaUploadInput}
-                      className="hidden"
-                    />
-                  </label>
                 </div>
               )}
             </div>

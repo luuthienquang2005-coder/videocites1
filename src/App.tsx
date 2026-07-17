@@ -29,7 +29,8 @@ import {
   savePhotoCommentsToFirestore,
   migratePhotoCommentsInFirestore,
   getVideoFromFirestore,
-  getPhotoFromFirestore
+  getPhotoFromFirestore,
+  addFirestoreStatusListener
 } from "./firebase";
 
 export default function App() {
@@ -38,6 +39,34 @@ export default function App() {
   
   const [comments, setComments] = useState<Record<string, VideoComment[]>>({});
   const [photoComments, setPhotoComments] = useState<Record<string, PhotoComment[]>>({});
+
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
+  const localMode = false;
+  const quotaExceeded = false;
+
+  // Listen for Firestore errors
+  useEffect(() => {
+    const removeListener = addFirestoreStatusListener(({ error }) => {
+      if (error) {
+        setFirestoreError(error);
+      }
+    });
+    return () => removeListener();
+  }, []);
+
+  // Populate fallback data if we are in Local mode
+  useEffect(() => {
+    if (localMode) {
+      if (videos.length === 0) {
+        setVideos(INITIAL_VIDEOS);
+        setSelectedVideoId((prev) => prev || INITIAL_VIDEOS[0]?.id || "videocites-sintel-cinematic");
+      }
+      if (photos.length === 0) {
+        setPhotos(INITIAL_PHOTOS);
+        setSelectedPhotoId((prev) => prev || INITIAL_PHOTOS[0]?.id || "videocites-photo-deep-space");
+      }
+    }
+  }, [localMode, videos.length, photos.length]);
 
   const [currentView, setCurrentView] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -166,7 +195,9 @@ export default function App() {
   // Initialize application states with real-time Firestore synchronization
   useEffect(() => {
     // Seed initial values in Firestore if database is empty
-    seedInitialDataIfNeeded();
+    seedInitialDataIfNeeded().catch((err) => {
+      console.warn("Seeding failed or database unreachable:", err);
+    });
 
     // Subscribe to all videos dynamically in real-time
     const unsubscribeVideos = subscribeToVideos((fetchedVideos) => {
@@ -205,6 +236,20 @@ export default function App() {
   useEffect(() => {
     if (!selectedVideoId) return;
 
+    if (localMode) {
+      if (!comments[selectedVideoId]) {
+        const targetVideo = videos.find((v) => v.id === selectedVideoId);
+        const commentsList = targetVideo 
+          ? (MOCK_COMMENTS[selectedVideoId] || generateCommentsForVideo(targetVideo, 24))
+          : [];
+        setComments((prev) => ({
+          ...prev,
+          [selectedVideoId]: commentsList,
+        }));
+      }
+      return;
+    }
+
     const unsubscribe = subscribeToComments(selectedVideoId, (fetchedComments) => {
       setComments((prev) => ({
         ...prev,
@@ -213,11 +258,25 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [selectedVideoId]);
+  }, [selectedVideoId, localMode, videos]);
 
   // Listen to comments for the currently active selected photo in real-time
   useEffect(() => {
     if (!selectedPhotoId) return;
+
+    if (localMode) {
+      if (!photoComments[selectedPhotoId]) {
+        const targetPhoto = photos.find((p) => p.id === selectedPhotoId);
+        const commentsList = targetPhoto 
+          ? generateCommentsForPhoto(targetPhoto, 24)
+          : [];
+        setPhotoComments((prev) => ({
+          ...prev,
+          [selectedPhotoId]: commentsList,
+        }));
+      }
+      return;
+    }
 
     const unsubscribe = subscribeToPhotoComments(selectedPhotoId, (fetchedComments) => {
       setPhotoComments((prev) => ({
@@ -227,7 +286,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [selectedPhotoId]);
+  }, [selectedPhotoId, localMode, photos]);
 
   // Protect admin panel by redirecting non-admins to the login page
   useEffect(() => {
@@ -246,6 +305,24 @@ export default function App() {
   // VIDEO DATABASE ACTIONS
   // ----------------------------------------------------
   const handleUpdateVideo = async (updatedVideo: Video, oldId?: string) => {
+    if (localMode) {
+      setVideos((prev) => {
+        const next = prev.map((v) => (v.id === (oldId || updatedVideo.id) ? updatedVideo : v));
+        if (oldId && oldId !== updatedVideo.id) {
+          setComments((cPrev) => {
+            const copy = { ...cPrev };
+            if (copy[oldId]) {
+              copy[updatedVideo.id] = copy[oldId];
+              delete copy[oldId];
+            }
+            return copy;
+          });
+        }
+        return next;
+      });
+      return;
+    }
+
     try {
       let finalVideo = { ...updatedVideo };
       
@@ -281,6 +358,17 @@ export default function App() {
   };
 
   const handleAddVideo = async (newVideo: Video) => {
+    if (localMode) {
+      setVideos((prev) => [newVideo, ...prev]);
+      const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
+      const generatedComments = generateCommentsForVideo(newVideo, randomCount);
+      setComments((prev) => ({
+        ...prev,
+        [newVideo.id]: generatedComments,
+      }));
+      return;
+    }
+
     try {
       await saveVideoToFirestore(newVideo);
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
@@ -292,6 +380,16 @@ export default function App() {
   };
 
   const handleDeleteVideo = async (id: string) => {
+    if (localMode) {
+      setVideos((prev) => prev.filter((v) => v.id !== id));
+      setComments((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      return;
+    }
+
     try {
       await deleteVideoFromFirestore(id);
     } catch (e) {
@@ -303,6 +401,24 @@ export default function App() {
   // PHOTO DATABASE ACTIONS
   // ----------------------------------------------------
   const handleUpdatePhoto = async (updatedPhoto: Photo, oldId?: string) => {
+    if (localMode) {
+      setPhotos((prev) => {
+        const next = prev.map((p) => (p.id === (oldId || updatedPhoto.id) ? updatedPhoto : p));
+        if (oldId && oldId !== updatedPhoto.id) {
+          setPhotoComments((cPrev) => {
+            const copy = { ...cPrev };
+            if (copy[oldId]) {
+              copy[updatedPhoto.id] = copy[oldId];
+              delete copy[oldId];
+            }
+            return copy;
+          });
+        }
+        return next;
+      });
+      return;
+    }
+
     try {
       let finalPhoto = { ...updatedPhoto };
       
@@ -338,6 +454,17 @@ export default function App() {
   };
 
   const handleAddPhoto = async (newPhoto: Photo) => {
+    if (localMode) {
+      setPhotos((prev) => [newPhoto, ...prev]);
+      const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
+      const generatedComments = generateCommentsForPhoto(newPhoto, randomCount);
+      setPhotoComments((prev) => ({
+        ...prev,
+        [newPhoto.id]: generatedComments,
+      }));
+      return;
+    }
+
     try {
       await savePhotoToFirestore(newPhoto);
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
@@ -349,6 +476,16 @@ export default function App() {
   };
 
   const handleDeletePhoto = async (id: string) => {
+    if (localMode) {
+      setPhotos((prev) => prev.filter((p) => p.id !== id));
+      setPhotoComments((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      return;
+    }
+
     try {
       await deletePhotoFromFirestore(id);
     } catch (e) {
@@ -358,6 +495,17 @@ export default function App() {
 
   // Reset entire database helper
   const handleResetDatabase = async () => {
+    if (localMode) {
+      setVideos(INITIAL_VIDEOS);
+      setSelectedVideoId(INITIAL_VIDEOS[0]?.id || "");
+      setPhotos(INITIAL_PHOTOS);
+      setSelectedPhotoId(INITIAL_PHOTOS[0]?.id || "");
+      setComments({});
+      setPhotoComments({});
+      navigateTo("admin");
+      return;
+    }
+
     try {
       // Re-seed videos
       for (const video of INITIAL_VIDEOS) {
@@ -389,6 +537,17 @@ export default function App() {
   // VIDEO COMMENTS & RATINGS ACTIONS
   // ----------------------------------------------------
   const handleAddComment = async (videoId: string, newComment: VideoComment) => {
+    if (localMode) {
+      setComments((prev) => {
+        const currentComments = prev[videoId] || [];
+        return {
+          ...prev,
+          [videoId]: [newComment, ...currentComments],
+        };
+      });
+      return;
+    }
+
     try {
       const currentComments = comments[videoId] || [];
       const updatedComments = [newComment, ...currentComments];
@@ -399,6 +558,14 @@ export default function App() {
   };
 
   const handleUpdateComments = async (videoId: string, updatedComments: VideoComment[]) => {
+    if (localMode) {
+      setComments((prev) => ({
+        ...prev,
+        [videoId]: updatedComments,
+      }));
+      return;
+    }
+
     try {
       setComments((prev) => ({
         ...prev,
@@ -451,6 +618,17 @@ export default function App() {
   // PHOTO COMMENTS & RATINGS ACTIONS
   // ----------------------------------------------------
   const handleAddPhotoComment = async (photoId: string, newComment: PhotoComment) => {
+    if (localMode) {
+      setPhotoComments((prev) => {
+        const currentComments = prev[photoId] || [];
+        return {
+          ...prev,
+          [photoId]: [newComment, ...currentComments],
+        };
+      });
+      return;
+    }
+
     try {
       const currentComments = photoComments[photoId] || [];
       const updatedComments = [newComment, ...currentComments];
@@ -461,6 +639,14 @@ export default function App() {
   };
 
   const handleUpdatePhotoComments = async (photoId: string, updatedComments: PhotoComment[]) => {
+    if (localMode) {
+      setPhotoComments((prev) => ({
+        ...prev,
+        [photoId]: updatedComments,
+      }));
+      return;
+    }
+
     try {
       setPhotoComments((prev) => ({
         ...prev,
