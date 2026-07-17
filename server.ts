@@ -8,6 +8,12 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Request logging middleware to see what hits the server
+  app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.url}`);
+    next();
+  });
+
   // Ensure uploads directory exists
   const uploadDir = path.join(process.cwd(), "uploads");
   if (!fs.existsSync(uploadDir)) {
@@ -30,6 +36,15 @@ async function startServer() {
 
   // Serve uploaded files statically on /uploads route
   app.use("/uploads", express.static(uploadDir));
+
+  // Test endpoints to debug 405
+  app.get("/api/upload-test", (req, res) => {
+    res.json({ message: "GET upload-test is working" });
+  });
+
+  app.post("/api/upload-test", (req, res) => {
+    res.json({ message: "POST upload-test is working" });
+  });
 
   // File Upload API endpoint
   app.post("/api/upload", upload.single("file"), (req: any, res: any) => {
