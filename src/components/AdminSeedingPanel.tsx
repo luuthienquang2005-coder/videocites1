@@ -205,17 +205,28 @@ export default function AdminSeedingPanel({
     const formData = new FormData();
     formData.append("file", file);
     
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      throw new Error("Failed to upload file");
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let details = "Unknown error";
+        try {
+          const errData = await response.json();
+          details = errData.error || errData.message || JSON.stringify(errData);
+        } catch {
+          details = await response.text().catch(() => "Unknown error");
+        }
+        throw new Error(`Status ${response.status} (${response.statusText}): ${details}`);
+      }
+      
+      const data = await response.json();
+      return data.url;
+    } catch (e: any) {
+      throw new Error(e.message || "Network error");
     }
-    
-    const data = await response.json();
-    return data.url;
   };
 
   const processFile = (file: File) => {
@@ -242,9 +253,9 @@ export default function AdminSeedingPanel({
         setTitle(cleanName);
         setDescription(`### ${cleanName}\n\nThis photo was uploaded via the secure CDN drag-and-drop panel.\n\n- **File Name:** ${file.name}\n- **Format:** Image Render asset\n- **License:** VIDEOCITES-PHOTO-DRM-${Math.floor(Math.random() * 90000) + 10000}`);
         triggerToast("Successfully uploaded and processed photo!");
-      }).catch((err) => {
+      }).catch((err: any) => {
         console.error("Upload error:", err);
-        triggerToast("Upload failed, falling back to local memory preview.");
+        triggerToast(`Upload failed: ${err.message || err}. Falling back to local memory preview.`);
         const reader = new FileReader();
         reader.onloadend = () => {
           if (typeof reader.result === "string") {
@@ -378,9 +389,9 @@ export default function AdminSeedingPanel({
           setMediaUrl(url);
         }
         triggerToast("Successfully uploaded image!");
-      } catch (err) {
+      } catch (err: any) {
         console.error("Upload error:", err);
-        triggerToast("Upload failed! Falling back to local preview.");
+        triggerToast(`Upload failed: ${err.message || err}. Falling back to local preview.`);
         const reader = new FileReader();
         reader.onloadend = () => {
           if (typeof reader.result === "string") {
