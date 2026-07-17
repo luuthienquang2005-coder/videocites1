@@ -220,7 +220,7 @@ export default function AdminSeedingPanel({
       return url;
     } catch (e: any) {
       setUploadProgress(null);
-      throw new Error(e.message || "Network error uploading to Firebase Storage");
+      throw new Error(e.message || "Network error uploading to Storage");
     }
   };
 
@@ -242,7 +242,7 @@ export default function AdminSeedingPanel({
 
     // Drag-drop image vs video loading
     if (mediaType === "photo") {
-      triggerToast("Uploading photo to Firebase Storage, please wait...");
+      triggerToast("Uploading photo, please wait...");
       uploadFile(file).then((url) => {
         setMediaUrl(url);
         setTitle(cleanName);
@@ -284,7 +284,7 @@ export default function AdminSeedingPanel({
       console.error("File duration extraction error", err);
     }
 
-    triggerToast("Uploading video to Firebase Storage, please wait...");
+    triggerToast("Uploading video, please wait...");
     uploadFile(file).then((url) => {
       setMediaUrl(url);
       setTitle(cleanName);
