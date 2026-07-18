@@ -10,12 +10,6 @@ import {
   getDocs,
   writeBatch
 } from "firebase/firestore";
-import { 
-  getStorage, 
-  ref, 
-  uploadBytesResumable, 
-  getDownloadURL 
-} from "firebase/storage";
 import { Video, VideoComment, Photo, PhotoComment } from "./types";
 import { INITIAL_VIDEOS, MOCK_COMMENTS, INITIAL_PHOTOS } from "./data";
 import { generateCommentsForVideo, generateCommentsForPhoto } from "./utils/commentGenerator";
@@ -31,44 +25,6 @@ export const db = getFirestore(
   app, 
   firebaseConfig.firestoreDatabaseId || "(default)"
 );
-
-// Initialize Firebase Storage
-export const storage = getStorage(app);
-
-// Helper to upload files directly to Firebase Storage with optional progress reporting
-export function uploadFileToStorage(
-  file: File, 
-  path: string, 
-  onProgress?: (progress: number) => void
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        if (onProgress) {
-          onProgress(Math.round(progress));
-        }
-      },
-      (error) => {
-        console.error("Firebase Storage Upload Error:", error);
-        reject(error);
-      },
-      async () => {
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
-        } catch (err) {
-          console.error("Firebase Storage getDownloadURL Error:", err);
-          reject(err);
-        }
-      }
-    );
-  });
-}
 
 console.log("Firebase initialized with project:", firebaseConfig.projectId, "and DB:", firebaseConfig.firestoreDatabaseId);
 
@@ -102,11 +58,14 @@ export interface FirestoreErrorInfo {
 // Status Listener system for UI notifications and fallback trigger
 export type FirestoreStatusCallback = (status: { error: string | null; isQuota: boolean }) => void;
 const statusListeners = new Set<FirestoreStatusCallback>();
-export const isQuotaExceeded = false;
+export let isQuotaExceeded = false;
 let lastQuotaErrorMsg = "";
 
 export function addFirestoreStatusListener(cb: FirestoreStatusCallback) {
   statusListeners.add(cb);
+  if (isQuotaExceeded) {
+    cb({ error: lastQuotaErrorMsg || "Quota limit exceeded", isQuota: true });
+  }
   return () => {
     statusListeners.delete(cb);
   };
@@ -115,20 +74,14 @@ export function addFirestoreStatusListener(cb: FirestoreStatusCallback) {
 export function notifyFirestoreStatus(errorMsg: string | null, isQuota: boolean) {
   if (isQuota) {
     lastQuotaErrorMsg = errorMsg || "Quota limit exceeded";
+    isQuotaExceeded = true;
   }
   statusListeners.forEach((cb) => cb({ error: errorMsg, isQuota }));
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMsg = error instanceof Error ? error.message : String(error);
-  const isQuota = errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource exhausted") || errMsg.toLowerCase().includes("limit exceeded") || errMsg.toLowerCase().includes("quota limit exceeded");
-  
-  if (isQuota) {
-    lastQuotaErrorMsg = errMsg;
-  }
-
-  // Notify any status listeners in the React app so they are aware of the state
-  notifyFirestoreStatus(errMsg, isQuota);
+  const isQuota = errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource_exhausted") || errMsg.toLowerCase().includes("quota limit exceeded");
 
   const errInfo: FirestoreErrorInfo = {
     error: errMsg,
@@ -144,7 +97,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  
+
+  if (isQuota) {
+    isQuotaExceeded = true;
+    lastQuotaErrorMsg = errMsg;
+    notifyFirestoreStatus(errMsg, true);
+    console.warn("Firestore service notice (Quota limit exceeded):", errMsg, "Operation:", operationType, "Path:", path);
+    return; // Return gracefully without throwing to avoid uncaught exceptions
+  }
+
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -154,6 +115,16 @@ export async function seedInitialDataIfNeeded() {
     console.warn("Firestore quota is exceeded, skipping seedInitialDataIfNeeded");
     return;
   }
+
+  try {
+    if (typeof window !== "undefined" && window.localStorage && window.localStorage.getItem("videocites-seeded-checked") === "true") {
+      console.log("Database has already been seeded or verified in a previous session. Skipping collection scans to conserve free daily read quota.");
+      return;
+    }
+  } catch (e) {
+    console.warn("localStorage check failed:", e);
+  }
+
   const path = "videos";
   try {
     const videosCol = collection(db, "videos");
@@ -299,6 +270,14 @@ export async function seedInitialDataIfNeeded() {
       }
     }
 
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("videocites-seeded-checked", "true");
+      }
+    } catch (e) {
+      console.warn("Could not save seeding status to localStorage:", e);
+    }
+
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -306,10 +285,6 @@ export async function seedInitialDataIfNeeded() {
 
 // Subscribe to all videos in real-time
 export function subscribeToVideos(onUpdate: (videos: Video[]) => void) {
-  if (isQuotaExceeded) {
-    console.warn("Firestore quota is exceeded, skipping subscribeToVideos");
-    return () => {};
-  }
   const videosCol = collection(db, "videos");
   return onSnapshot(videosCol, (snapshot) => {
     const list: Video[] = [];
@@ -321,20 +296,12 @@ export function subscribeToVideos(onUpdate: (videos: Video[]) => void) {
     list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     onUpdate(list);
   }, (error) => {
-    try {
-      handleFirestoreError(error, OperationType.GET, "videos");
-    } catch (e) {
-      console.warn("Handled videos subscription error, falling back locally");
-    }
+    handleFirestoreError(error, OperationType.GET, "videos");
   });
 }
 
 // Subscribe to comments for a specific video in real-time
 export function subscribeToComments(videoId: string, onUpdate: (comments: VideoComment[]) => void) {
-  if (isQuotaExceeded) {
-    console.warn(`Firestore quota is exceeded, skipping subscribeToComments for video ${videoId}`);
-    return () => {};
-  }
   const commentPath = `comments/${videoId}`;
   const commentDoc = doc(db, "comments", videoId);
   return onSnapshot(commentDoc, (snapshot) => {
@@ -345,19 +312,12 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
       onUpdate([]);
     }
   }, (error) => {
-    try {
-      handleFirestoreError(error, OperationType.GET, commentPath);
-    } catch (e) {
-      console.warn("Handled comments subscription error, falling back locally");
-    }
+    handleFirestoreError(error, OperationType.GET, commentPath);
   });
 }
 
 // Fetch a single video from Firestore
 export async function getVideoFromFirestore(videoId: string): Promise<Video | null> {
-  if (isQuotaExceeded) {
-    return null;
-  }
   try {
     const docSnap = await getDoc(doc(db, "videos", videoId));
     if (docSnap.exists()) {
@@ -372,9 +332,6 @@ export async function getVideoFromFirestore(videoId: string): Promise<Video | nu
 
 // Fetch a single photo from Firestore
 export async function getPhotoFromFirestore(photoId: string): Promise<Photo | null> {
-  if (isQuotaExceeded) {
-    return null;
-  }
   try {
     const docSnap = await getDoc(doc(db, "photos", photoId));
     if (docSnap.exists()) {
@@ -389,9 +346,6 @@ export async function getPhotoFromFirestore(photoId: string): Promise<Photo | nu
 
 // Add or update a video in Firestore
 export async function saveVideoToFirestore(video: Video) {
-  if (isQuotaExceeded) {
-    return;
-  }
   const videoPath = `videos/${video.id}`;
   try {
     await setDoc(doc(db, "videos", video.id), video);
@@ -402,9 +356,6 @@ export async function saveVideoToFirestore(video: Video) {
 
 // Delete a video and its comments from Firestore
 export async function deleteVideoFromFirestore(videoId: string) {
-  if (isQuotaExceeded) {
-    return;
-  }
   try {
     await deleteDoc(doc(db, "videos", videoId));
     await deleteDoc(doc(db, "comments", videoId));
@@ -415,9 +366,6 @@ export async function deleteVideoFromFirestore(videoId: string) {
 
 // Save comments for a video
 export async function saveCommentsToFirestore(videoId: string, comments: VideoComment[]) {
-  if (isQuotaExceeded) {
-    return;
-  }
   const commentPath = `comments/${videoId}`;
   try {
     await setDoc(doc(db, "comments", videoId), { comments });
@@ -428,9 +376,6 @@ export async function saveCommentsToFirestore(videoId: string, comments: VideoCo
 
 // Migrate comments when a video ID is changed
 export async function migrateCommentsInFirestore(oldId: string, newId: string) {
-  if (isQuotaExceeded) {
-    return;
-  }
   try {
     const oldCommentDoc = doc(db, "comments", oldId);
     const newCommentDoc = doc(db, "comments", newId);
@@ -449,10 +394,6 @@ export async function migrateCommentsInFirestore(oldId: string, newId: string) {
 
 // Subscribe to all photos in real-time
 export function subscribeToPhotos(onUpdate: (photos: Photo[]) => void) {
-  if (isQuotaExceeded) {
-    console.warn("Firestore quota is exceeded, skipping subscribeToPhotos");
-    return () => {};
-  }
   const photosCol = collection(db, "photos");
   return onSnapshot(photosCol, (snapshot) => {
     const list: Photo[] = [];
@@ -462,20 +403,12 @@ export function subscribeToPhotos(onUpdate: (photos: Photo[]) => void) {
     list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     onUpdate(list);
   }, (error) => {
-    try {
-      handleFirestoreError(error, OperationType.GET, "photos");
-    } catch (e) {
-      console.warn("Handled photos subscription error, falling back locally");
-    }
+    handleFirestoreError(error, OperationType.GET, "photos");
   });
 }
 
 // Subscribe to photo comments in real-time
 export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: PhotoComment[]) => void) {
-  if (isQuotaExceeded) {
-    console.warn(`Firestore quota is exceeded, skipping subscribeToPhotoComments for photo ${photoId}`);
-    return () => {};
-  }
   const commentPath = `photoComments/${photoId}`;
   const commentDoc = doc(db, "photoComments", photoId);
   return onSnapshot(commentDoc, (snapshot) => {
@@ -486,19 +419,12 @@ export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: P
       onUpdate([]);
     }
   }, (error) => {
-    try {
-      handleFirestoreError(error, OperationType.GET, commentPath);
-    } catch (e) {
-      console.warn("Handled photo comments subscription error, falling back locally");
-    }
+    handleFirestoreError(error, OperationType.GET, commentPath);
   });
 }
 
 // Save a photo to Firestore
 export async function savePhotoToFirestore(photo: Photo) {
-  if (isQuotaExceeded) {
-    return;
-  }
   const photoPath = `photos/${photo.id}`;
   try {
     await setDoc(doc(db, "photos", photo.id), photo);
@@ -509,9 +435,6 @@ export async function savePhotoToFirestore(photo: Photo) {
 
 // Delete a photo and its comments
 export async function deletePhotoFromFirestore(photoId: string) {
-  if (isQuotaExceeded) {
-    return;
-  }
   try {
     await deleteDoc(doc(db, "photos", photoId));
     await deleteDoc(doc(db, "photoComments", photoId));
@@ -522,9 +445,6 @@ export async function deletePhotoFromFirestore(photoId: string) {
 
 // Save photo comments
 export async function savePhotoCommentsToFirestore(photoId: string, comments: PhotoComment[]) {
-  if (isQuotaExceeded) {
-    return;
-  }
   const commentPath = `photoComments/${photoId}`;
   try {
     await setDoc(doc(db, "photoComments", photoId), { comments });
@@ -535,9 +455,6 @@ export async function savePhotoCommentsToFirestore(photoId: string, comments: Ph
 
 // Migrate photo comments when photo ID changes
 export async function migratePhotoCommentsInFirestore(oldId: string, newId: string) {
-  if (isQuotaExceeded) {
-    return;
-  }
   try {
     const oldCommentDoc = doc(db, "photoComments", oldId);
     const newCommentDoc = doc(db, "photoComments", newId);

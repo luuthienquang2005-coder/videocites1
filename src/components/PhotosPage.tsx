@@ -3,7 +3,6 @@ import { Photo } from "../types";
 import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
 import { Image as ImageIcon, Eye, ThumbsUp, Calendar, ArrowUpDown, Search, CheckCircle, Sparkles, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import LazyImage from "./LazyImage";
 
 interface PhotosPageProps {
   photos: Photo[];
@@ -17,11 +16,6 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState<SortOption>("latest");
-
-  // Pagination / Load More State
-  const [visibleCount, setVisibleCount] = useState(6);
-  const [isAutoScroll, setIsAutoScroll] = useState(false);
-  const loaderRef = React.useRef<HTMLDivElement>(null);
 
   const categories = ["All", ...CATEGORIES_LIST];
 
@@ -79,40 +73,6 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
       return bDate - aDate;
     });
   }, [photos, searchQuery, selectedCategory, sortBy]);
-
-  // Reset visible count on filter change
-  React.useEffect(() => {
-    setVisibleCount(6);
-  }, [searchQuery, selectedCategory, sortBy]);
-
-  // Infinite Scroll Trigger
-  React.useEffect(() => {
-    if (!isAutoScroll || visibleCount >= processedPhotos.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + 6, processedPhotos.length));
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const currentLoader = loaderRef.current;
-    if (currentLoader) {
-      observer.observe(currentLoader);
-    }
-
-    return () => {
-      if (currentLoader) {
-        observer.unobserve(currentLoader);
-      }
-    };
-  }, [isAutoScroll, visibleCount, processedPhotos.length]);
-
-  const slicedPhotos = useMemo(() => {
-    return processedPhotos.slice(0, visibleCount);
-  }, [processedPhotos, visibleCount]);
 
   return (
     <div className="w-full py-10 px-4 md:px-6 min-h-screen select-none font-sans transition-colors duration-300" id="photos-page-container">
@@ -202,7 +162,7 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="photos-grid">
               <AnimatePresence mode="popLayout">
-                {slicedPhotos.map((pic, idx) => {
+                {processedPhotos.map((pic, idx) => {
                   const totalViews = pic.baseViews + pic.realViews;
                   const totalLikes = pic.baseLikes + pic.realLikes;
                   return (
@@ -220,10 +180,10 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
                     >
                       {/* Photo Image Frame */}
                       <div className="relative aspect-video w-full overflow-hidden bg-black">
-                        <LazyImage
+                        <img
                           src={pic.imageUrl}
                           alt={pic.title}
-                          className="group-hover:scale-105 transition-transform duration-700"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                           referrerPolicy="no-referrer"
                         />
 
@@ -270,13 +230,12 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5">
                           {/* Author layout */}
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-slate-200 dark:border-white/10">
-                              <LazyImage
-                                src={pic.author.avatar}
-                                alt={pic.author.name}
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
+                            <img
+                              src={pic.author.avatar}
+                              alt={pic.author.name}
+                              className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                              referrerPolicy="no-referrer"
+                            />
                             <div className="flex items-center gap-0.5 min-w-0">
                               <span className="text-xs md:text-sm font-bold text-slate-950 dark:text-neutral-200 truncate">
                                 {pic.author.name}
@@ -310,64 +269,6 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
                   );
                 })}
               </AnimatePresence>
-            </div>
-          )}
-
-          {/* Pagination, Progress & Infinite Scroll controls */}
-          {processedPhotos.length > 6 && (
-            <div className="mt-12 flex flex-col items-center gap-4 bg-slate-50 dark:bg-zinc-900/10 border border-slate-200 dark:border-white/5 rounded-2xl p-6 max-w-xl mx-auto shadow-sm">
-              {/* Progress Bar & Status */}
-              <div className="w-full space-y-2">
-                <div className="flex justify-between text-xs font-bold font-mono text-slate-700 dark:text-neutral-400">
-                  <span>SHOWING {Math.min(visibleCount, processedPhotos.length)} OF {processedPhotos.length} PHOTOS</span>
-                  <span>{Math.round((Math.min(visibleCount, processedPhotos.length) / processedPhotos.length) * 100)}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                    style={{ width: `${(Math.min(visibleCount, processedPhotos.length) / processedPhotos.length) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Mode Toggle & Button */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-between pt-2">
-                {/* Infinite Scroll Switch */}
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={isAutoScroll} 
-                    onChange={(e) => setIsAutoScroll(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="relative w-9 h-5 bg-slate-300 peer-focus:outline-none dark:bg-white/10 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500 rounded-full" />
-                  <span className="text-[11px] font-extrabold font-mono text-slate-700 dark:text-neutral-400 tracking-wider uppercase">
-                    {isAutoScroll ? "⚡ Infinite Scroll ON" : "Infinite Scroll OFF"}
-                  </span>
-                </label>
-
-                {/* Load More Button */}
-                {visibleCount < processedPhotos.length ? (
-                  <button
-                    onClick={() => setVisibleCount((prev) => Math.min(prev + 6, processedPhotos.length))}
-                    disabled={isAutoScroll}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wider uppercase transition-all flex items-center gap-2 cursor-pointer ${
-                      isAutoScroll 
-                        ? "bg-slate-200 dark:bg-white/5 text-slate-400 cursor-not-allowed border border-transparent" 
-                        : "bg-blue-500 hover:bg-blue-600 text-neutral-950 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-95"
-                    }`}
-                  >
-                    <span>Load More Photos</span>
-                  </button>
-                ) : (
-                  <span className="text-[10px] font-bold font-mono text-blue-500 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
-                    ✨ All Content Loaded
-                  </span>
-                )}
-              </div>
-
-              {/* Intersection observer anchor */}
-              <div ref={loaderRef} className="h-2 w-full" />
             </div>
           )}
         </div>

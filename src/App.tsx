@@ -12,6 +12,7 @@ import ContactPage from "./components/ContactPage";
 import MegaFooter from "./components/MegaFooter";
 import AdminLogin from "./components/AdminLogin";
 import VideosPage from "./components/VideosPage";
+import { AlertTriangle, Database, ExternalLink } from "lucide-react";
 import { safeStorage } from "./utils/safeStorage";
 import { generateCommentsForVideo, generateCommentsForPhoto } from "./utils/commentGenerator";
 import { 
@@ -31,42 +32,15 @@ import {
   getVideoFromFirestore,
   getPhotoFromFirestore,
   addFirestoreStatusListener
-} from "./dbService";
+} from "./firebase";
 
 export default function App() {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [videos, setVideos] = useState<Video[]>(INITIAL_VIDEOS);
+  const [photos, setPhotos] = useState<Photo[]>(INITIAL_PHOTOS);
   
-  const [comments, setComments] = useState<Record<string, VideoComment[]>>({});
+  const [comments, setComments] = useState<Record<string, VideoComment[]>>(MOCK_COMMENTS);
   const [photoComments, setPhotoComments] = useState<Record<string, PhotoComment[]>>({});
-
-  const [firestoreError, setFirestoreError] = useState<string | null>(null);
-  const localMode = false;
-  const quotaExceeded = false;
-
-  // Listen for Firestore errors
-  useEffect(() => {
-    const removeListener = addFirestoreStatusListener(({ error }) => {
-      if (error) {
-        setFirestoreError(error);
-      }
-    });
-    return () => removeListener();
-  }, []);
-
-  // Populate fallback data if we are in Local mode
-  useEffect(() => {
-    if (localMode) {
-      if (videos.length === 0) {
-        setVideos(INITIAL_VIDEOS);
-        setSelectedVideoId((prev) => prev || INITIAL_VIDEOS[0]?.id || "videocites-sintel-cinematic");
-      }
-      if (photos.length === 0) {
-        setPhotos(INITIAL_PHOTOS);
-        setSelectedPhotoId((prev) => prev || INITIAL_PHOTOS[0]?.id || "videocites-photo-deep-space");
-      }
-    }
-  }, [localMode, videos.length, photos.length]);
+  const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
 
   const [currentView, setCurrentView] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -127,6 +101,16 @@ export default function App() {
   const handleToggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
+
+  // Register Firestore Status Listener to track Quota limit exceeded error
+  useEffect(() => {
+    const unsubscribeStatus = addFirestoreStatusListener(({ isQuota }) => {
+      if (isQuota) {
+        setQuotaExceeded(true);
+      }
+    });
+    return () => unsubscribeStatus();
+  }, []);
 
   // Handle popstate for browser navigation (back/forward buttons)
   useEffect(() => {
@@ -195,9 +179,7 @@ export default function App() {
   // Initialize application states with real-time Firestore synchronization
   useEffect(() => {
     // Seed initial values in Firestore if database is empty
-    seedInitialDataIfNeeded().catch((err) => {
-      console.warn("Seeding failed or database unreachable:", err);
-    });
+    seedInitialDataIfNeeded();
 
     // Subscribe to all videos dynamically in real-time
     const unsubscribeVideos = subscribeToVideos((fetchedVideos) => {
@@ -236,20 +218,6 @@ export default function App() {
   useEffect(() => {
     if (!selectedVideoId) return;
 
-    if (localMode) {
-      if (!comments[selectedVideoId]) {
-        const targetVideo = videos.find((v) => v.id === selectedVideoId);
-        const commentsList = targetVideo 
-          ? (MOCK_COMMENTS[selectedVideoId] || generateCommentsForVideo(targetVideo, 24))
-          : [];
-        setComments((prev) => ({
-          ...prev,
-          [selectedVideoId]: commentsList,
-        }));
-      }
-      return;
-    }
-
     const unsubscribe = subscribeToComments(selectedVideoId, (fetchedComments) => {
       setComments((prev) => ({
         ...prev,
@@ -258,25 +226,11 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [selectedVideoId, localMode, videos]);
+  }, [selectedVideoId]);
 
   // Listen to comments for the currently active selected photo in real-time
   useEffect(() => {
     if (!selectedPhotoId) return;
-
-    if (localMode) {
-      if (!photoComments[selectedPhotoId]) {
-        const targetPhoto = photos.find((p) => p.id === selectedPhotoId);
-        const commentsList = targetPhoto 
-          ? generateCommentsForPhoto(targetPhoto, 24)
-          : [];
-        setPhotoComments((prev) => ({
-          ...prev,
-          [selectedPhotoId]: commentsList,
-        }));
-      }
-      return;
-    }
 
     const unsubscribe = subscribeToPhotoComments(selectedPhotoId, (fetchedComments) => {
       setPhotoComments((prev) => ({
@@ -286,7 +240,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [selectedPhotoId, localMode, photos]);
+  }, [selectedPhotoId]);
 
   // Protect admin panel by redirecting non-admins to the login page
   useEffect(() => {
@@ -305,24 +259,6 @@ export default function App() {
   // VIDEO DATABASE ACTIONS
   // ----------------------------------------------------
   const handleUpdateVideo = async (updatedVideo: Video, oldId?: string) => {
-    if (localMode) {
-      setVideos((prev) => {
-        const next = prev.map((v) => (v.id === (oldId || updatedVideo.id) ? updatedVideo : v));
-        if (oldId && oldId !== updatedVideo.id) {
-          setComments((cPrev) => {
-            const copy = { ...cPrev };
-            if (copy[oldId]) {
-              copy[updatedVideo.id] = copy[oldId];
-              delete copy[oldId];
-            }
-            return copy;
-          });
-        }
-        return next;
-      });
-      return;
-    }
-
     try {
       let finalVideo = { ...updatedVideo };
       
@@ -358,17 +294,6 @@ export default function App() {
   };
 
   const handleAddVideo = async (newVideo: Video) => {
-    if (localMode) {
-      setVideos((prev) => [newVideo, ...prev]);
-      const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
-      const generatedComments = generateCommentsForVideo(newVideo, randomCount);
-      setComments((prev) => ({
-        ...prev,
-        [newVideo.id]: generatedComments,
-      }));
-      return;
-    }
-
     try {
       await saveVideoToFirestore(newVideo);
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
@@ -380,16 +305,6 @@ export default function App() {
   };
 
   const handleDeleteVideo = async (id: string) => {
-    if (localMode) {
-      setVideos((prev) => prev.filter((v) => v.id !== id));
-      setComments((prev) => {
-        const copy = { ...prev };
-        delete copy[id];
-        return copy;
-      });
-      return;
-    }
-
     try {
       await deleteVideoFromFirestore(id);
     } catch (e) {
@@ -401,24 +316,6 @@ export default function App() {
   // PHOTO DATABASE ACTIONS
   // ----------------------------------------------------
   const handleUpdatePhoto = async (updatedPhoto: Photo, oldId?: string) => {
-    if (localMode) {
-      setPhotos((prev) => {
-        const next = prev.map((p) => (p.id === (oldId || updatedPhoto.id) ? updatedPhoto : p));
-        if (oldId && oldId !== updatedPhoto.id) {
-          setPhotoComments((cPrev) => {
-            const copy = { ...cPrev };
-            if (copy[oldId]) {
-              copy[updatedPhoto.id] = copy[oldId];
-              delete copy[oldId];
-            }
-            return copy;
-          });
-        }
-        return next;
-      });
-      return;
-    }
-
     try {
       let finalPhoto = { ...updatedPhoto };
       
@@ -454,17 +351,6 @@ export default function App() {
   };
 
   const handleAddPhoto = async (newPhoto: Photo) => {
-    if (localMode) {
-      setPhotos((prev) => [newPhoto, ...prev]);
-      const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
-      const generatedComments = generateCommentsForPhoto(newPhoto, randomCount);
-      setPhotoComments((prev) => ({
-        ...prev,
-        [newPhoto.id]: generatedComments,
-      }));
-      return;
-    }
-
     try {
       await savePhotoToFirestore(newPhoto);
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
@@ -476,16 +362,6 @@ export default function App() {
   };
 
   const handleDeletePhoto = async (id: string) => {
-    if (localMode) {
-      setPhotos((prev) => prev.filter((p) => p.id !== id));
-      setPhotoComments((prev) => {
-        const copy = { ...prev };
-        delete copy[id];
-        return copy;
-      });
-      return;
-    }
-
     try {
       await deletePhotoFromFirestore(id);
     } catch (e) {
@@ -495,17 +371,6 @@ export default function App() {
 
   // Reset entire database helper
   const handleResetDatabase = async () => {
-    if (localMode) {
-      setVideos(INITIAL_VIDEOS);
-      setSelectedVideoId(INITIAL_VIDEOS[0]?.id || "");
-      setPhotos(INITIAL_PHOTOS);
-      setSelectedPhotoId(INITIAL_PHOTOS[0]?.id || "");
-      setComments({});
-      setPhotoComments({});
-      navigateTo("admin");
-      return;
-    }
-
     try {
       // Re-seed videos
       for (const video of INITIAL_VIDEOS) {
@@ -537,17 +402,6 @@ export default function App() {
   // VIDEO COMMENTS & RATINGS ACTIONS
   // ----------------------------------------------------
   const handleAddComment = async (videoId: string, newComment: VideoComment) => {
-    if (localMode) {
-      setComments((prev) => {
-        const currentComments = prev[videoId] || [];
-        return {
-          ...prev,
-          [videoId]: [newComment, ...currentComments],
-        };
-      });
-      return;
-    }
-
     try {
       const currentComments = comments[videoId] || [];
       const updatedComments = [newComment, ...currentComments];
@@ -558,14 +412,6 @@ export default function App() {
   };
 
   const handleUpdateComments = async (videoId: string, updatedComments: VideoComment[]) => {
-    if (localMode) {
-      setComments((prev) => ({
-        ...prev,
-        [videoId]: updatedComments,
-      }));
-      return;
-    }
-
     try {
       setComments((prev) => ({
         ...prev,
@@ -618,17 +464,6 @@ export default function App() {
   // PHOTO COMMENTS & RATINGS ACTIONS
   // ----------------------------------------------------
   const handleAddPhotoComment = async (photoId: string, newComment: PhotoComment) => {
-    if (localMode) {
-      setPhotoComments((prev) => {
-        const currentComments = prev[photoId] || [];
-        return {
-          ...prev,
-          [photoId]: [newComment, ...currentComments],
-        };
-      });
-      return;
-    }
-
     try {
       const currentComments = photoComments[photoId] || [];
       const updatedComments = [newComment, ...currentComments];
@@ -639,14 +474,6 @@ export default function App() {
   };
 
   const handleUpdatePhotoComments = async (photoId: string, updatedComments: PhotoComment[]) => {
-    if (localMode) {
-      setPhotoComments((prev) => ({
-        ...prev,
-        [photoId]: updatedComments,
-      }));
-      return;
-    }
-
     try {
       setPhotoComments((prev) => ({
         ...prev,
@@ -758,6 +585,58 @@ export default function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
       />
+
+      {quotaExceeded && (
+        <div id="quota-exceeded-banner" className={`border-y py-4 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top duration-300 ${
+          theme === "light" 
+            ? "bg-amber-50 border-amber-200 text-amber-900" 
+            : "bg-amber-950/40 border-amber-900/40 text-amber-200"
+        }`}>
+          <div className="flex items-start gap-4">
+            <div className={`p-2 rounded-lg mt-1 shrink-0 ${
+              theme === "light" ? "bg-amber-100 text-amber-700" : "bg-amber-500/20 text-amber-400"
+            }`}>
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className={`font-bold text-base flex flex-wrap items-center gap-2 ${
+                theme === "light" ? "text-amber-950" : "text-amber-300"
+              }`}>
+                Firestore Free Tier Quota Limit Reached
+              </h4>
+              <p className={`text-xs max-w-3xl mt-1 leading-relaxed ${
+                theme === "light" ? "text-amber-800" : "text-amber-400"
+              }`}>
+                The application has reached the free daily read/write units for the Firebase Firestore project database. Detailed quota limits can be found under the <strong>Spark</strong> plan column in the <strong>Enterprise edition</strong> section of the{" "}
+                <a 
+                  href="https://firebase.google.com/pricing#cloud-firestore" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:opacity-80 transition-opacity font-medium inline-flex items-center gap-0.5"
+                >
+                  Firebase Pricing Page <ExternalLink className="w-3 h-3" />
+                </a>. Please upgrade your Firestore plan or wait until the quota resets to restore functionality.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0 w-full md:w-auto self-stretch md:self-center justify-end">
+            <a
+              href="https://console.firebase.google.com/project/jaunty-dimension-qfs6l/firestore/databases/ai-studio-remixvnaoh-e1d592b3-22c2-40d6-bad9-5154f161bdc0/data?openUpgradeDialog=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-4 py-2 font-semibold rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md shrink-0 ${
+                theme === "light"
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-amber-500 hover:bg-amber-400 text-black"
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              Manage / Upgrade Database
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* 2. Main Page Renderings */}
       <main className="flex-grow">

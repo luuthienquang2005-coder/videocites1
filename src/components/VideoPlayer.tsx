@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Logo from "./Logo";
-import LazyImage from "./LazyImage";
 
 interface VideoPlayerProps {
   src: string;
@@ -27,7 +26,6 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [isActivated, setIsActivated] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [bufferedEnd, setBufferedEnd] = useState(0);
@@ -46,7 +44,7 @@ export default function VideoPlayer({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isRightClickWarning, setIsRightClickWarning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Watermark position shift to simulate anti-camtracing
   const [watermarkPos, setWatermarkPos] = useState({ top: "20%", left: "15%" });
@@ -90,12 +88,6 @@ export default function VideoPlayer({
 
   // Handle media updates
   const handlePlayPause = () => {
-    if (!isActivated) {
-      setIsActivated(true);
-      setIsLoading(true);
-      setIsPlaying(true);
-      return;
-    }
     if (!videoRef.current) return;
     if (isPlaying) {
       videoRef.current.pause();
@@ -106,19 +98,6 @@ export default function VideoPlayer({
       }).catch(err => console.log("Play failed: ", err));
     }
   };
-
-  useEffect(() => {
-    if (isActivated && videoRef.current) {
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-        setIsLoading(false);
-      }).catch(err => {
-        console.log("Auto-play on activation failed: ", err);
-        setIsPlaying(false);
-        setIsLoading(false);
-      });
-    }
-  }, [isActivated]);
 
   const handleProgress = () => {
     if (videoRef.current && videoRef.current.buffered.length > 0) {
@@ -335,54 +314,25 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* HTML5 Video Element (Lazy loaded until user clicks play) */}
-      {isActivated ? (
-        <video
-          ref={videoRef}
-          src={src}
-          poster={poster}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onClick={handlePlayPause}
-          onWaiting={() => setIsLoading(true)}
-          onPlaying={() => setIsLoading(false)}
-          onCanPlay={() => setIsLoading(false)}
-          onCanPlayThrough={() => setIsLoading(false)}
-          onLoadStart={() => setIsLoading(true)}
-          onProgress={handleProgress}
-          onEnded={onEnded}
-          preload="auto"
-          className="w-full h-full object-contain cursor-pointer"
-          playsInline
-        />
-      ) : (
-        <div 
-          onClick={handlePlayPause}
-          className="w-full h-full cursor-pointer relative"
-        >
-          <LazyImage 
-            src={poster} 
-            alt="Video Poster" 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-          />
-          {/* Decorative play button badge matching Youtube style */}
-          <div className="absolute inset-0 bg-black/30 transition-opacity group-hover:bg-black/40 flex items-center justify-center">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0.8 }}
-              whileHover={{ scale: 1.05 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-18 h-18 rounded-full bg-blue-500/90 text-neutral-950 flex items-center justify-center shadow-2xl backdrop-blur-sm border border-white/20 transition-all duration-300"
-            >
-              <Play className="w-9 h-9 fill-[#050505] text-[#050505] translate-x-0.5" />
-            </motion.div>
-          </div>
-          
-          {/* Elegant notice of lazy stream preparation */}
-          <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] font-mono tracking-widest text-blue-400 border border-blue-500/20 uppercase font-bold">
-            ⚡ LAZY VIDEO STREAM READY
-          </div>
-        </div>
-      )}
+      {/* HTML5 Video Element */}
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onClick={handlePlayPause}
+        onWaiting={() => setIsLoading(true)}
+        onPlaying={() => setIsLoading(false)}
+        onCanPlay={() => setIsLoading(false)}
+        onCanPlayThrough={() => setIsLoading(false)}
+        onLoadStart={() => setIsLoading(true)}
+        onProgress={handleProgress}
+        onEnded={onEnded}
+        preload="auto"
+        className="w-full h-full object-contain cursor-pointer"
+        playsInline
+      />
 
       {/* Invisible overlay capturing click when speed menu is open to close it */}
       {showSpeedMenu && (

@@ -1,59 +1,10 @@
 import express from "express";
 import path from "path";
-import fs from "fs";
-import multer from "multer";
 import { createServer as createViteServer } from "vite";
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
-
-  // Request logging middleware to see what hits the server
-  app.use((req, res, next) => {
-    console.log(`[Request] ${req.method} ${req.url}`);
-    next();
-  });
-
-  // Ensure uploads directory exists - Use /tmp/uploads for write access in Cloud Run's read-only filesystem
-  const uploadDir = path.join("/tmp", "uploads");
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-
-  // Multer Storage Configuration
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname);
-      cb(null, file.fieldname + "-" + uniqueSuffix + ext);
-    },
-  });
-
-  const upload = multer({ storage });
-
-  // Serve uploaded files statically on /uploads route
-  app.use("/uploads", express.static(uploadDir));
-
-  // Test endpoints to debug 405
-  app.get("/api/upload-test", (req, res) => {
-    res.json({ message: "GET upload-test is working" });
-  });
-
-  app.post("/api/upload-test", (req, res) => {
-    res.json({ message: "POST upload-test is working" });
-  });
-
-  // File Upload API endpoint
-  app.post("/api/upload", upload.single("file"), (req: any, res: any) => {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    return res.json({ url: fileUrl });
-  });
+  const PORT = 3000;
 
   // Serve static assets or use Vite middleware
   if (process.env.NODE_ENV !== "production") {

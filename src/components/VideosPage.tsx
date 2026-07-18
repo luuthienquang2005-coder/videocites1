@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { Video } from "../types";
 import { CATEGORIES_LIST, normalizeCategory } from "../utils/categories";
 import { Play, Eye, ThumbsUp, Calendar, ArrowUpDown, Search, Film, CheckCircle, Sparkles, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import LazyImage from "./LazyImage";
 
 interface VideosPageProps {
   videos: Video[];
@@ -17,11 +16,6 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState<SortOption>("latest");
-
-  // Pagination / Load More State
-  const [visibleCount, setVisibleCount] = useState(6);
-  const [isAutoScroll, setIsAutoScroll] = useState(false);
-  const loaderRef = useRef<HTMLDivElement>(null);
 
   const categories = ["All", ...CATEGORIES_LIST];
 
@@ -79,40 +73,6 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
       return bDate - aDate;
     });
   }, [videos, searchQuery, selectedCategory, sortBy]);
-
-  // Reset visible count on filter change
-  useEffect(() => {
-    setVisibleCount(6);
-  }, [searchQuery, selectedCategory, sortBy]);
-
-  // Infinite Scroll Trigger
-  useEffect(() => {
-    if (!isAutoScroll || visibleCount >= processedVideos.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + 6, processedVideos.length));
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const currentLoader = loaderRef.current;
-    if (currentLoader) {
-      observer.observe(currentLoader);
-    }
-
-    return () => {
-      if (currentLoader) {
-        observer.unobserve(currentLoader);
-      }
-    };
-  }, [isAutoScroll, visibleCount, processedVideos.length]);
-
-  const slicedVideos = useMemo(() => {
-    return processedVideos.slice(0, visibleCount);
-  }, [processedVideos, visibleCount]);
 
   return (
     <div className="w-full py-10 px-4 md:px-6 min-h-screen select-none font-sans transition-colors duration-300">
@@ -200,7 +160,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence mode="popLayout">
-                {slicedVideos.map((vid, idx) => {
+                {processedVideos.map((vid, idx) => {
                   const totalViews = vid.baseViews + vid.realViews;
                   const totalLikes = vid.baseLikes + vid.realLikes;
                   return (
@@ -217,10 +177,10 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                     >
                       {/* Thumbnail frame */}
                       <div className="relative aspect-video w-full overflow-hidden bg-black">
-                        <LazyImage
+                        <img
                           src={vid.thumbnailUrl}
                           alt={vid.title}
-                          className="group-hover:scale-105 transition-transform duration-700"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                         
                         {/* Duration badge */}
@@ -270,12 +230,11 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5">
                           {/* Author layout */}
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-slate-200 dark:border-white/10">
-                              <LazyImage
-                                src={vid.author.avatar}
-                                alt={vid.author.name}
-                              />
-                            </div>
+                            <img
+                              src={vid.author.avatar}
+                              alt={vid.author.name}
+                              className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                            />
                             <div className="flex items-center gap-0.5 min-w-0">
                               <span className="text-xs md:text-sm font-bold text-slate-950 dark:text-neutral-200 truncate">
                                 {vid.author.name}
@@ -309,64 +268,6 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                   );
                 })}
               </AnimatePresence>
-            </div>
-          )}
-
-          {/* Pagination, Progress & Infinite Scroll controls */}
-          {processedVideos.length > 6 && (
-            <div className="mt-12 flex flex-col items-center gap-4 bg-slate-50 dark:bg-zinc-900/10 border border-slate-200 dark:border-white/5 rounded-2xl p-6 max-w-xl mx-auto shadow-sm">
-              {/* Progress Bar & Status */}
-              <div className="w-full space-y-2">
-                <div className="flex justify-between text-xs font-bold font-mono text-slate-700 dark:text-neutral-400">
-                  <span>SHOWING {Math.min(visibleCount, processedVideos.length)} OF {processedVideos.length} VIDEOS</span>
-                  <span>{Math.round((Math.min(visibleCount, processedVideos.length) / processedVideos.length) * 100)}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
-                    style={{ width: `${(Math.min(visibleCount, processedVideos.length) / processedVideos.length) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Mode Toggle & Button */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-between pt-2">
-                {/* Infinite Scroll Switch */}
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={isAutoScroll} 
-                    onChange={(e) => setIsAutoScroll(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="relative w-9 h-5 bg-slate-300 peer-focus:outline-none dark:bg-white/10 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500 rounded-full" />
-                  <span className="text-[11px] font-extrabold font-mono text-slate-700 dark:text-neutral-400 tracking-wider uppercase">
-                    {isAutoScroll ? "⚡ Infinite Scroll ON" : "Infinite Scroll OFF"}
-                  </span>
-                </label>
-
-                {/* Load More Button */}
-                {visibleCount < processedVideos.length ? (
-                  <button
-                    onClick={() => setVisibleCount((prev) => Math.min(prev + 6, processedVideos.length))}
-                    disabled={isAutoScroll}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-black tracking-wider uppercase transition-all flex items-center gap-2 cursor-pointer ${
-                      isAutoScroll 
-                        ? "bg-slate-200 dark:bg-white/5 text-slate-400 cursor-not-allowed border border-transparent" 
-                        : "bg-blue-500 hover:bg-blue-600 text-neutral-950 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-95"
-                    }`}
-                  >
-                    <span>Load More Videos</span>
-                  </button>
-                ) : (
-                  <span className="text-[10px] font-bold font-mono text-blue-500 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
-                    ✨ All Content Loaded
-                  </span>
-                )}
-              </div>
-
-              {/* Intersection observer anchor */}
-              <div ref={loaderRef} className="h-2 w-full" />
             </div>
           )}
         </div>
