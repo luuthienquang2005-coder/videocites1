@@ -55,33 +55,8 @@ export interface FirestoreErrorInfo {
   }
 }
 
-// Status Listener system for UI notifications and fallback trigger
-export type FirestoreStatusCallback = (status: { error: string | null; isQuota: boolean }) => void;
-const statusListeners = new Set<FirestoreStatusCallback>();
-export let isQuotaExceeded = false;
-let lastQuotaErrorMsg = "";
-
-export function addFirestoreStatusListener(cb: FirestoreStatusCallback) {
-  statusListeners.add(cb);
-  if (isQuotaExceeded) {
-    cb({ error: lastQuotaErrorMsg || "Quota limit exceeded", isQuota: true });
-  }
-  return () => {
-    statusListeners.delete(cb);
-  };
-}
-
-export function notifyFirestoreStatus(errorMsg: string | null, isQuota: boolean) {
-  if (isQuota) {
-    lastQuotaErrorMsg = errorMsg || "Quota limit exceeded";
-    isQuotaExceeded = true;
-  }
-  statusListeners.forEach((cb) => cb({ error: errorMsg, isQuota }));
-}
-
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMsg = error instanceof Error ? error.message : String(error);
-  const isQuota = errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("resource_exhausted") || errMsg.toLowerCase().includes("quota limit exceeded");
 
   const errInfo: FirestoreErrorInfo = {
     error: errMsg,
@@ -97,25 +72,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-
-  if (isQuota) {
-    isQuotaExceeded = true;
-    lastQuotaErrorMsg = errMsg;
-    notifyFirestoreStatus(errMsg, true);
-    console.warn("Firestore service notice (Quota limit exceeded):", errMsg, "Operation:", operationType, "Path:", path);
-    return; // Return gracefully without throwing to avoid uncaught exceptions
-  }
-
   throw new Error(JSON.stringify(errInfo));
 }
 
 // Seeding function: Seeds initial videos and comments if they don't exist yet in Firestore
 export async function seedInitialDataIfNeeded() {
-  if (isQuotaExceeded) {
-    console.warn("Firestore quota is exceeded, skipping seedInitialDataIfNeeded");
-    return;
-  }
-
   try {
     if (typeof window !== "undefined" && window.localStorage && window.localStorage.getItem("videocites-seeded-checked") === "true") {
       console.log("Database has already been seeded or verified in a previous session. Skipping collection scans to conserve free daily read quota.");
