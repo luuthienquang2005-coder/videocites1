@@ -250,7 +250,6 @@ export default function App() {
       let finalVideo = { ...updatedVideo };
       
       if (oldId) {
-        // Fetch latest stats from Firestore so they are preserved
         const idToFetch = oldId !== updatedVideo.id ? oldId : updatedVideo.id;
         const latestDoc = await getVideoFromFirestore(idToFetch);
         if (latestDoc) {
@@ -261,7 +260,7 @@ export default function App() {
       }
 
       if (oldId && oldId !== updatedVideo.id) {
-        // Migrate comments first so they are not deleted by deleteVideoFromFirestore
+        setVideos((prev) => prev.map((v) => (v.id === oldId ? finalVideo : v)));
         await migrateCommentsInFirestore(oldId, updatedVideo.id);
         await deleteVideoFromFirestore(oldId);
         await saveVideoToFirestore(finalVideo);
@@ -273,6 +272,7 @@ export default function App() {
           }
         }
       } else {
+        setVideos((prev) => prev.map((v) => (v.id === updatedVideo.id ? finalVideo : v)));
         await saveVideoToFirestore(finalVideo);
       }
     } catch (e) {
@@ -282,9 +282,11 @@ export default function App() {
 
   const handleAddVideo = async (newVideo: Video) => {
     try {
+      setVideos((prev) => [newVideo, ...prev]);
       await saveVideoToFirestore(newVideo);
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
       const generatedComments = generateCommentsForVideo(newVideo, randomCount);
+      setComments((prev) => ({ ...prev, [newVideo.id]: generatedComments }));
       await saveCommentsToFirestore(newVideo.id, generatedComments);
     } catch (e) {
       console.error("Failed to add video to Firestore:", e);
@@ -293,6 +295,7 @@ export default function App() {
 
   const handleDeleteVideo = async (id: string) => {
     try {
+      setVideos((prev) => prev.filter((v) => v.id !== id));
       await deleteVideoFromFirestore(id);
     } catch (e) {
       console.error("Failed to delete video from Firestore:", e);
@@ -307,7 +310,6 @@ export default function App() {
       let finalPhoto = { ...updatedPhoto };
       
       if (oldId) {
-        // Fetch latest stats from Firestore so they are preserved
         const idToFetch = oldId !== updatedPhoto.id ? oldId : updatedPhoto.id;
         const latestDoc = await getPhotoFromFirestore(idToFetch);
         if (latestDoc) {
@@ -318,7 +320,7 @@ export default function App() {
       }
 
       if (oldId && oldId !== updatedPhoto.id) {
-        // Migrate photo comments first so they are not deleted by deletePhotoFromFirestore
+        setPhotos((prev) => prev.map((p) => (p.id === oldId ? finalPhoto : p)));
         await migratePhotoCommentsInFirestore(oldId, updatedPhoto.id);
         await deletePhotoFromFirestore(oldId);
         await savePhotoToFirestore(finalPhoto);
@@ -330,6 +332,7 @@ export default function App() {
           }
         }
       } else {
+        setPhotos((prev) => prev.map((p) => (p.id === updatedPhoto.id ? finalPhoto : p)));
         await savePhotoToFirestore(finalPhoto);
       }
     } catch (e) {
@@ -339,9 +342,11 @@ export default function App() {
 
   const handleAddPhoto = async (newPhoto: Photo) => {
     try {
+      setPhotos((prev) => [newPhoto, ...prev]);
       await savePhotoToFirestore(newPhoto);
       const randomCount = Math.floor(Math.random() * 11) + 20; // 20-30 comments
       const generatedComments = generateCommentsForPhoto(newPhoto, randomCount);
+      setPhotoComments((prev) => ({ ...prev, [newPhoto.id]: generatedComments }));
       await savePhotoCommentsToFirestore(newPhoto.id, generatedComments);
     } catch (e) {
       console.error("Failed to add photo to Firestore:", e);
@@ -350,6 +355,7 @@ export default function App() {
 
   const handleDeletePhoto = async (id: string) => {
     try {
+      setPhotos((prev) => prev.filter((p) => p.id !== id));
       await deletePhotoFromFirestore(id);
     } catch (e) {
       console.error("Failed to delete photo from Firestore:", e);
@@ -359,24 +365,30 @@ export default function App() {
   // Reset entire database helper
   const handleResetDatabase = async () => {
     try {
-      // Re-seed videos
-      for (const video of INITIAL_VIDEOS) {
+      const videoSeedList = [...INITIAL_VIDEOS];
+      const photoSeedList = [...INITIAL_PHOTOS];
+
+      setVideos(videoSeedList);
+      setPhotos(photoSeedList);
+
+      for (const video of videoSeedList) {
         await saveVideoToFirestore(video);
         const randomCount = Math.floor(Math.random() * 11) + 20;
         const generatedComments = generateCommentsForVideo(video, randomCount);
+        setComments((prev) => ({ ...prev, [video.id]: generatedComments }));
         await saveCommentsToFirestore(video.id, generatedComments);
       }
-      const defaultId = INITIAL_VIDEOS[0]?.id || "";
+      const defaultId = videoSeedList[0]?.id || "";
       setSelectedVideoId(defaultId);
 
-      // Re-seed photos
-      for (const photo of INITIAL_PHOTOS) {
+      for (const photo of photoSeedList) {
         await savePhotoToFirestore(photo);
         const randomCount = Math.floor(Math.random() * 11) + 20;
         const generatedComments = generateCommentsForPhoto(photo, randomCount);
+        setPhotoComments((prev) => ({ ...prev, [photo.id]: generatedComments }));
         await savePhotoCommentsToFirestore(photo.id, generatedComments);
       }
-      const defaultPhotoId = INITIAL_PHOTOS[0]?.id || "";
+      const defaultPhotoId = photoSeedList[0]?.id || "";
       setSelectedPhotoId(defaultPhotoId);
 
       navigateTo("admin");
@@ -392,6 +404,10 @@ export default function App() {
     try {
       const currentComments = comments[videoId] || [];
       const updatedComments = [newComment, ...currentComments];
+      setComments((prev) => ({
+        ...prev,
+        [videoId]: updatedComments,
+      }));
       await saveCommentsToFirestore(videoId, updatedComments);
     } catch (e) {
       console.error("Failed to post comment to Firestore:", e);
@@ -421,6 +437,7 @@ export default function App() {
         ...target,
         realViews: target.realViews + 1,
       };
+      setVideos((prev) => prev.map((v) => (v.id === id ? updated : v)));
       handleUpdateVideo(updated);
     }
   };
@@ -432,6 +449,7 @@ export default function App() {
         ...target,
         realLikes: target.realLikes + 1,
       };
+      setVideos((prev) => prev.map((v) => (v.id === id ? updated : v)));
       handleUpdateVideo(updated);
     }
   };
@@ -443,6 +461,7 @@ export default function App() {
         ...target,
         realDislikes: target.realDislikes + 1,
       };
+      setVideos((prev) => prev.map((v) => (v.id === id ? updated : v)));
       handleUpdateVideo(updated);
     }
   };
@@ -454,6 +473,10 @@ export default function App() {
     try {
       const currentComments = photoComments[photoId] || [];
       const updatedComments = [newComment, ...currentComments];
+      setPhotoComments((prev) => ({
+        ...prev,
+        [photoId]: updatedComments,
+      }));
       await savePhotoCommentsToFirestore(photoId, updatedComments);
     } catch (e) {
       console.error("Failed to post photo comment to Firestore:", e);
@@ -483,6 +506,7 @@ export default function App() {
         ...target,
         realViews: target.realViews + 1,
       };
+      setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
       handleUpdatePhoto(updated);
     }
   };
@@ -494,6 +518,7 @@ export default function App() {
         ...target,
         realLikes: target.realLikes + 1,
       };
+      setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
       handleUpdatePhoto(updated);
     }
   };
@@ -505,6 +530,7 @@ export default function App() {
         ...target,
         realDislikes: target.realDislikes + 1,
       };
+      setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
       handleUpdatePhoto(updated);
     }
   };
