@@ -645,7 +645,7 @@ export default function AdminSeedingPanel({
         )}
 
         {/* Drag & Drop Area for Fast CDN Upload (Shown in Add Tab) */}
-        {activeTab === "add" && (
+        {activeTab === "add" && mediaType === "photo" && (
           <div className="max-w-4xl mx-auto">
             <div
               onDragEnter={handleDrag}
