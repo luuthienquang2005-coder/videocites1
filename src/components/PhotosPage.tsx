@@ -185,6 +185,7 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
                           alt={pic.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                           referrerPolicy="no-referrer"
+                          loading="lazy"
                         />
 
                         {/* Category badge */}
@@ -235,6 +236,7 @@ export default function PhotosPage({ photos, onSelectPhoto, isAdmin }: PhotosPag
                               alt={pic.author.name}
                               className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
                               referrerPolicy="no-referrer"
+                              loading="lazy"
                             />
                             <div className="flex items-center gap-0.5 min-w-0">
                               <span className="text-xs md:text-sm font-bold text-slate-950 dark:text-neutral-200 truncate">

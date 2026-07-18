@@ -181,6 +181,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                           src={vid.thumbnailUrl}
                           alt={vid.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          loading="lazy"
                         />
                         
                         {/* Duration badge */}
@@ -234,6 +235,7 @@ export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPag
                               src={vid.author.avatar}
                               alt={vid.author.name}
                               className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200 dark:border-white/10"
+                              loading="lazy"
                             />
                             <div className="flex items-center gap-0.5 min-w-0">
                               <span className="text-xs md:text-sm font-bold text-slate-950 dark:text-neutral-200 truncate">
