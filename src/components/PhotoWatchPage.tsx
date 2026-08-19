@@ -365,11 +365,6 @@ export default function PhotoWatchPage({
                 <span>{formatNumber(totalViews)} views</span>
                 <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-neutral-600" />
                 <span>{getDisplayDate()}</span>
-                {photo.backdatedDate && (
-                  <span className="text-[10px] bg-blue-500/15 border border-blue-500/25 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-medium">
-                    Post-release Backdated
-                  </span>
-                )}
               </div>
 
               {/* Markdown Content (collapsible) */}

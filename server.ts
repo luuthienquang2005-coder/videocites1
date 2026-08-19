@@ -18,7 +18,7 @@ async function startServer() {
     app.use(express.static(distPath));
     
     // Redirect all requests to index.html for React Router SPA behavior
-    app.get("*", (req, res) => {
+    app.get("*all", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
