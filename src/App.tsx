@@ -33,11 +33,38 @@ import {
 } from "./firebase";
 
 export default function App() {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [videos, setVideos] = useState<Video[]>(() => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem("videocites-cache-videos");
+        if (cached) {
+          const list = JSON.parse(cached);
+          if (Array.isArray(list) && list.length > 0) return list;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_VIDEOS;
+  });
+
+  const [photos, setPhotos] = useState<Photo[]>(() => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem("videocites-cache-photos");
+        if (cached) {
+          const list = JSON.parse(cached);
+          if (Array.isArray(list) && list.length > 0) return list;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_PHOTOS;
+  });
   
-  const [comments, setComments] = useState<Record<string, VideoComment[]>>({});
-  const [photoComments, setPhotoComments] = useState<Record<string, PhotoComment[]>>({});
+  const [comments, setComments] = useState<Record<string, VideoComment[]>>(() => {
+    return { ...MOCK_COMMENTS };
+  });
+  const [photoComments, setPhotoComments] = useState<Record<string, PhotoComment[]>>(() => {
+    return { ...MOCK_COMMENTS };
+  });
 
   const [currentView, setCurrentView] = useState<string>(() => {
     if (typeof window !== "undefined") {

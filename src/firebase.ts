@@ -52,10 +52,10 @@ export interface FirestoreErrorInfo {
       providerId?: string | null;
       email?: string | null;
     }[];
-  }
+  };
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function logFirestoreError(error: unknown, operationType: OperationType, path: string | null): FirestoreErrorInfo {
   const errMsg = error instanceof Error ? error.message : String(error);
 
   const errInfo: FirestoreErrorInfo = {
@@ -72,6 +72,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  return errInfo;
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo = logFirestoreError(error, operationType, path);
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -79,7 +84,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 export async function seedInitialDataIfNeeded() {
   try {
     if (typeof window !== "undefined" && window.localStorage && window.localStorage.getItem("videocites-seeded-checked") === "true") {
-      console.log("Database has already been seeded or verified in a previous session. Skipping collection scans to conserve free daily read quota.");
       return;
     }
   } catch (e) {
@@ -112,7 +116,6 @@ export async function seedInitialDataIfNeeded() {
       
       console.log("Firestore seeding completed successfully.");
     } else {
-      console.log("Firestore database already has data, checking for missing default videos, updated publication dates, and comments auto-filling...");
       let addedCount = 0;
       let updatedCount = 0;
       for (const video of INITIAL_VIDEOS) {
@@ -125,7 +128,6 @@ export async function seedInitialDataIfNeeded() {
           await setDoc(doc(db, "comments", video.id), { comments: commentList });
           addedCount++;
         } else {
-          // Check if publication date has updated
           const matchingDoc = snapshot.docs.find((d) => d.id === video.id);
           if (matchingDoc) {
             const data = matchingDoc.data() as Video;
@@ -140,7 +142,7 @@ export async function seedInitialDataIfNeeded() {
         }
       }
 
-      // Check comments count for ALL videos currently stored in the system (existing & new)
+      // Check comments count for ALL videos currently stored in the system
       const commentsCol = collection(db, "comments");
       const commentsSnapshot = await getDocs(commentsCol);
       const commentsMap = new Map<string, VideoComment[]>();
@@ -148,7 +150,6 @@ export async function seedInitialDataIfNeeded() {
         commentsMap.set(doc.id, doc.data().comments || []);
       });
 
-      // Reload latest video entries to cover any new ones just added
       const latestVideosSnapshot = await getDocs(videosCol);
       const allVideos: Video[] = [];
       latestVideosSnapshot.forEach((doc) => {
@@ -159,7 +160,6 @@ export async function seedInitialDataIfNeeded() {
       for (const video of allVideos) {
         const existingComments = commentsMap.get(video.id) || [];
         if (existingComments.length === 0) {
-          // Automatically generate 20-30 comments based on caption/description/tags
           const randomCount = Math.floor(Math.random() * 11) + 20;
           const generated = generateCommentsForVideo(video, randomCount);
           await setDoc(doc(db, "comments", video.id), { comments: generated });
@@ -168,9 +168,7 @@ export async function seedInitialDataIfNeeded() {
       }
 
       if (addedCount > 0 || updatedCount > 0 || autoPopulatedCommentsCount > 0) {
-        console.log(`Incremental seeding completed. Added ${addedCount} default videos, updated ${updatedCount} dates, and backfilled ${autoPopulatedCommentsCount} videos with 20-30 comments.`);
-      } else {
-        console.log("Firestore already fully synchronized and populated with comments.");
+        console.log(`Incremental seeding completed. Added ${addedCount} default videos, updated ${updatedCount} dates, and backfilled ${autoPopulatedCommentsCount} videos with comments.`);
       }
     }
 
@@ -240,7 +238,8 @@ export async function seedInitialDataIfNeeded() {
     }
 
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    // Gracefully catch any quota or connection errors without crashing the app startup
+    logFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
@@ -269,8 +268,9 @@ function clearLocalCache(type: "videos" | "photos" | "comments" | "photocomments
 export function subscribeToVideos(onUpdate: (videos: Video[]) => void) {
   const CACHE_KEY = "videocites-cache-videos";
   const CACHE_TIME_KEY = "videocites-cache-videos-time";
-  const TTL = 120000; // 2 minutes
+  const TTL = 300000; // 5 minutes
 
+  // Immediately notify listener if valid cache exists
   if (typeof window !== "undefined" && window.localStorage) {
     try {
       const cached = window.localStorage.getItem(CACHE_KEY);
@@ -279,8 +279,9 @@ export function subscribeToVideos(onUpdate: (videos: Video[]) => void) {
         const age = Date.now() - parseInt(cachedTime, 10);
         if (age < TTL) {
           const list = JSON.parse(cached) as Video[];
-          onUpdate(list);
-          return () => {};
+          if (list && list.length > 0) {
+            onUpdate(list);
+          }
         }
       }
     } catch (e) {
@@ -296,18 +297,34 @@ export function subscribeToVideos(onUpdate: (videos: Video[]) => void) {
     });
     list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     
+    const finalList = list.length > 0 ? list : INITIAL_VIDEOS;
+
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        window.localStorage.setItem(CACHE_KEY, JSON.stringify(list));
+        window.localStorage.setItem(CACHE_KEY, JSON.stringify(finalList));
         window.localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
       } catch (e) {
         console.warn("Error saving videos cache:", e);
       }
     }
     
-    onUpdate(list);
+    onUpdate(finalList);
   }, (error) => {
-    handleFirestoreError(error, OperationType.GET, "videos");
+    logFirestoreError(error, OperationType.GET, "videos");
+    // Gracefully provide cached videos or initial fallback on quota limit / network error
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const list = JSON.parse(cached) as Video[];
+          if (list && list.length > 0) {
+            onUpdate(list);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+    onUpdate(INITIAL_VIDEOS);
   });
 }
 
@@ -316,7 +333,7 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
   const commentPath = `comments/${videoId}`;
   const CACHE_KEY = `videocites-cache-comments-${videoId}`;
   const CACHE_TIME_KEY = `videocites-cache-comments-${videoId}-time`;
-  const TTL = 120000; // 2 minutes
+  const TTL = 300000; // 5 minutes
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -327,7 +344,6 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
         if (age < TTL) {
           const commentsList = JSON.parse(cached) as VideoComment[];
           onUpdate(commentsList);
-          return () => {};
         }
       }
     } catch (e) {
@@ -341,6 +357,8 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
     if (snapshot.exists()) {
       const data = snapshot.data();
       commentsList = data.comments || [];
+    } else if (MOCK_COMMENTS[videoId]) {
+      commentsList = MOCK_COMMENTS[videoId];
     }
     
     if (typeof window !== "undefined" && window.localStorage) {
@@ -354,7 +372,18 @@ export function subscribeToComments(videoId: string, onUpdate: (comments: VideoC
     
     onUpdate(commentsList);
   }, (error) => {
-    handleFirestoreError(error, OperationType.GET, commentPath);
+    logFirestoreError(error, OperationType.GET, commentPath);
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const commentsList = JSON.parse(cached) as VideoComment[];
+          onUpdate(commentsList);
+          return;
+        }
+      } catch (e) {}
+    }
+    onUpdate(MOCK_COMMENTS[videoId] || []);
   });
 }
 
@@ -367,8 +396,19 @@ export async function getVideoFromFirestore(videoId: string): Promise<Video | nu
     }
     return null;
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `videos/${videoId}`);
-    return null;
+    logFirestoreError(error, OperationType.GET, `videos/${videoId}`);
+    // Check local storage fallback
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem("videocites-cache-videos");
+        if (cached) {
+          const list = JSON.parse(cached) as Video[];
+          const found = list.find(v => v.id === videoId);
+          if (found) return found;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_VIDEOS.find(v => v.id === videoId) || null;
   }
 }
 
@@ -381,42 +421,84 @@ export async function getPhotoFromFirestore(photoId: string): Promise<Photo | nu
     }
     return null;
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `photos/${photoId}`);
-    return null;
+    logFirestoreError(error, OperationType.GET, `photos/${photoId}`);
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem("videocites-cache-photos");
+        if (cached) {
+          const list = JSON.parse(cached) as Photo[];
+          const found = list.find(p => p.id === photoId);
+          if (found) return found;
+        }
+      } catch (e) {}
+    }
+    return INITIAL_PHOTOS.find(p => p.id === photoId) || null;
   }
 }
 
 // Add or update a video in Firestore
 export async function saveVideoToFirestore(video: Video) {
   const videoPath = `videos/${video.id}`;
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const cached = window.localStorage.getItem("videocites-cache-videos");
+      let list = cached ? (JSON.parse(cached) as Video[]) : [...INITIAL_VIDEOS];
+      const idx = list.findIndex(v => v.id === video.id);
+      if (idx >= 0) {
+        list[idx] = video;
+      } else {
+        list.unshift(video);
+      }
+      window.localStorage.setItem("videocites-cache-videos", JSON.stringify(list));
+      window.localStorage.setItem("videocites-cache-videos-time", Date.now().toString());
+    } catch (e) {}
+  }
+
   try {
     await setDoc(doc(db, "videos", video.id), video);
     clearLocalCache("videos");
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, videoPath);
+    logFirestoreError(error, OperationType.WRITE, videoPath);
   }
 }
 
 // Delete a video and its comments from Firestore
 export async function deleteVideoFromFirestore(videoId: string) {
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const cached = window.localStorage.getItem("videocites-cache-videos");
+      if (cached) {
+        const list = (JSON.parse(cached) as Video[]).filter(v => v.id !== videoId);
+        window.localStorage.setItem("videocites-cache-videos", JSON.stringify(list));
+      }
+    } catch (e) {}
+  }
+
   try {
     await deleteDoc(doc(db, "videos", videoId));
     await deleteDoc(doc(db, "comments", videoId));
     clearLocalCache("videos");
     clearLocalCache("comments", videoId);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `videos/${videoId}`);
+    logFirestoreError(error, OperationType.DELETE, `videos/${videoId}`);
   }
 }
 
 // Save comments for a video
 export async function saveCommentsToFirestore(videoId: string, comments: VideoComment[]) {
   const commentPath = `comments/${videoId}`;
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      window.localStorage.setItem(`videocites-cache-comments-${videoId}`, JSON.stringify(comments));
+      window.localStorage.setItem(`videocites-cache-comments-${videoId}-time`, Date.now().toString());
+    } catch (e) {}
+  }
+
   try {
     await setDoc(doc(db, "comments", videoId), { comments });
     clearLocalCache("comments", videoId);
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, commentPath);
+    logFirestoreError(error, OperationType.WRITE, commentPath);
   }
 }
 
@@ -436,7 +518,7 @@ export async function migrateCommentsInFirestore(oldId: string, newId: string) {
     clearLocalCache("comments", oldId);
     clearLocalCache("comments", newId);
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `comments/${newId}`);
+    logFirestoreError(error, OperationType.WRITE, `comments/${newId}`);
   }
 }
 
@@ -444,7 +526,7 @@ export async function migrateCommentsInFirestore(oldId: string, newId: string) {
 export function subscribeToPhotos(onUpdate: (photos: Photo[]) => void) {
   const CACHE_KEY = "videocites-cache-photos";
   const CACHE_TIME_KEY = "videocites-cache-photos-time";
-  const TTL = 120000; // 2 minutes
+  const TTL = 300000; // 5 minutes
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -454,8 +536,9 @@ export function subscribeToPhotos(onUpdate: (photos: Photo[]) => void) {
         const age = Date.now() - parseInt(cachedTime, 10);
         if (age < TTL) {
           const list = JSON.parse(cached) as Photo[];
-          onUpdate(list);
-          return () => {};
+          if (list && list.length > 0) {
+            onUpdate(list);
+          }
         }
       }
     } catch (e) {
@@ -471,18 +554,33 @@ export function subscribeToPhotos(onUpdate: (photos: Photo[]) => void) {
     });
     list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
     
+    const finalList = list.length > 0 ? list : INITIAL_PHOTOS;
+
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        window.localStorage.setItem(CACHE_KEY, JSON.stringify(list));
+        window.localStorage.setItem(CACHE_KEY, JSON.stringify(finalList));
         window.localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
       } catch (e) {
         console.warn("Error saving photos cache:", e);
       }
     }
     
-    onUpdate(list);
+    onUpdate(finalList);
   }, (error) => {
-    handleFirestoreError(error, OperationType.GET, "photos");
+    logFirestoreError(error, OperationType.GET, "photos");
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const list = JSON.parse(cached) as Photo[];
+          if (list && list.length > 0) {
+            onUpdate(list);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+    onUpdate(INITIAL_PHOTOS);
   });
 }
 
@@ -491,7 +589,7 @@ export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: P
   const commentPath = `photoComments/${photoId}`;
   const CACHE_KEY = `videocites-cache-photocomments-${photoId}`;
   const CACHE_TIME_KEY = `videocites-cache-photocomments-${photoId}-time`;
-  const TTL = 120000; // 2 minutes
+  const TTL = 300000; // 5 minutes
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -502,7 +600,6 @@ export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: P
         if (age < TTL) {
           const commentsList = JSON.parse(cached) as PhotoComment[];
           onUpdate(commentsList);
-          return () => {};
         }
       }
     } catch (e) {
@@ -516,6 +613,8 @@ export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: P
     if (snapshot.exists()) {
       const data = snapshot.data();
       commentsList = data.comments || [];
+    } else if (MOCK_COMMENTS[photoId]) {
+      commentsList = MOCK_COMMENTS[photoId];
     }
     
     if (typeof window !== "undefined" && window.localStorage) {
@@ -529,41 +628,84 @@ export function subscribeToPhotoComments(photoId: string, onUpdate: (comments: P
     
     onUpdate(commentsList);
   }, (error) => {
-    handleFirestoreError(error, OperationType.GET, commentPath);
+    logFirestoreError(error, OperationType.GET, commentPath);
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const cached = window.localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const commentsList = JSON.parse(cached) as PhotoComment[];
+          onUpdate(commentsList);
+          return;
+        }
+      } catch (e) {}
+    }
+    onUpdate(MOCK_COMMENTS[photoId] || []);
   });
 }
 
 // Save a photo to Firestore
 export async function savePhotoToFirestore(photo: Photo) {
   const photoPath = `photos/${photo.id}`;
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const cached = window.localStorage.getItem("videocites-cache-photos");
+      let list = cached ? (JSON.parse(cached) as Photo[]) : [...INITIAL_PHOTOS];
+      const idx = list.findIndex(p => p.id === photo.id);
+      if (idx >= 0) {
+        list[idx] = photo;
+      } else {
+        list.unshift(photo);
+      }
+      window.localStorage.setItem("videocites-cache-photos", JSON.stringify(list));
+      window.localStorage.setItem("videocites-cache-photos-time", Date.now().toString());
+    } catch (e) {}
+  }
+
   try {
     await setDoc(doc(db, "photos", photo.id), photo);
     clearLocalCache("photos");
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, photoPath);
+    logFirestoreError(error, OperationType.WRITE, photoPath);
   }
 }
 
 // Delete a photo and its comments
 export async function deletePhotoFromFirestore(photoId: string) {
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const cached = window.localStorage.getItem("videocites-cache-photos");
+      if (cached) {
+        const list = (JSON.parse(cached) as Photo[]).filter(p => p.id !== photoId);
+        window.localStorage.setItem("videocites-cache-photos", JSON.stringify(list));
+      }
+    } catch (e) {}
+  }
+
   try {
     await deleteDoc(doc(db, "photos", photoId));
     await deleteDoc(doc(db, "photoComments", photoId));
     clearLocalCache("photos");
     clearLocalCache("photocomments", photoId);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `photos/${photoId}`);
+    logFirestoreError(error, OperationType.DELETE, `photos/${photoId}`);
   }
 }
 
 // Save photo comments
 export async function savePhotoCommentsToFirestore(photoId: string, comments: PhotoComment[]) {
   const commentPath = `photoComments/${photoId}`;
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      window.localStorage.setItem(`videocites-cache-photocomments-${photoId}`, JSON.stringify(comments));
+      window.localStorage.setItem(`videocites-cache-photocomments-${photoId}-time`, Date.now().toString());
+    } catch (e) {}
+  }
+
   try {
     await setDoc(doc(db, "photoComments", photoId), { comments });
     clearLocalCache("photocomments", photoId);
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, commentPath);
+    logFirestoreError(error, OperationType.WRITE, commentPath);
   }
 }
 
@@ -583,7 +725,6 @@ export async function migratePhotoCommentsInFirestore(oldId: string, newId: stri
     clearLocalCache("photocomments", oldId);
     clearLocalCache("photocomments", newId);
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `photoComments/${newId}`);
+    logFirestoreError(error, OperationType.WRITE, `photoComments/${newId}`);
   }
 }
-
