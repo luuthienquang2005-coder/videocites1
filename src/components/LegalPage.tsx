@@ -185,7 +185,7 @@ export default function LegalPage() {
                     To defend copyright holders against screen capturing, cam-tracking, and external hardware interceptors, Videocites implements real-time dynamic digital forensic watermarking.
                   </p>
                   <p>
-                    When playing secure streams on our DRM platform, a subtle, semi-transparent watermark containing the authenticated viewer's email (e.g., <span className="text-blue-500 font-semibold font-mono">mnzfrankie@gmail.com</span>), system IP, and a high-resolution session timestamp is dynamically overlaid on top of the rendering canvas.
+                    When playing secure streams on our DRM platform, a subtle, semi-transparent watermark containing the authenticated viewer's email (e.g., <span className="text-blue-500 font-semibold font-mono">user@example.com</span>), system IP, and a high-resolution session timestamp is dynamically overlaid on top of the rendering canvas.
                   </p>
                   <ul className="list-disc pl-5 space-y-1 text-slate-700 dark:text-neutral-400">
                     <li>The watermark shifts horizontal and vertical coordinates randomly at micro-intervals to prevent computer vision croppers.</li>

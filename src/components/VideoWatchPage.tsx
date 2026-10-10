@@ -352,7 +352,6 @@ export default function VideoWatchPage({
               <VideoPlayer 
                 src={video.videoUrl} 
                 poster={video.thumbnailUrl} 
-                viewerId="mnzfrankie@gmail.com" 
                 onEnded={handleVideoEnded}
                 isTheaterMode={isTheaterMode}
                 onToggleTheater={toggleTheaterMode}
@@ -422,7 +421,6 @@ export default function VideoWatchPage({
                 <VideoPlayer 
                   src={video.videoUrl} 
                   poster={video.thumbnailUrl} 
-                  viewerId="mnzfrankie@gmail.com" 
                   onEnded={handleVideoEnded}
                   isTheaterMode={isTheaterMode}
                   onToggleTheater={toggleTheaterMode}

@@ -19,7 +19,7 @@ interface VideoPlayerProps {
 export default function VideoPlayer({ 
   src, 
   poster, 
-  viewerId = "mnzfrankie@gmail.com",
+  viewerId,
   onEnded,
   isTheaterMode = false,
   onToggleTheater
@@ -410,12 +410,14 @@ export default function VideoPlayer({
           )}
 
           {/* Dynamic Floating Watermark with Viewer ID */}
-          <div 
-            className="absolute pointer-events-none select-none z-10 opacity-30 transition-all duration-1000 ease-in-out font-mono text-[10px] text-white/50 tracking-wider bg-black/40 px-2 py-0.5 rounded border border-white/5 backdrop-blur-xs"
-            style={{ top: watermarkPos.top, left: watermarkPos.left }}
-          >
-            {viewerId}
-          </div>
+          {viewerId && (
+            <div 
+              className="absolute pointer-events-none select-none z-10 opacity-30 transition-all duration-1000 ease-in-out font-mono text-[10px] text-white/50 tracking-wider bg-black/40 px-2 py-0.5 rounded border border-white/5 backdrop-blur-xs"
+              style={{ top: watermarkPos.top, left: watermarkPos.left }}
+            >
+              {viewerId}
+            </div>
+          )}
 
           {/* YouTube-style brand watermark in bottom-right corner */}
           <div className="absolute bottom-16 right-4 md:bottom-20 md:right-6 pointer-events-none select-none z-10 flex flex-col items-center gap-1 opacity-25 md:opacity-35 group-hover:opacity-65 transition-opacity duration-300">
