@@ -12,7 +12,7 @@ interface VideosPageProps {
 
 type SortOption = "latest" | "popular" | "likes" | "title";
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 24;
 
 export default function VideosPage({ videos, onSelectVideo, isAdmin }: VideosPageProps) {
   const [searchQuery, setSearchQuery] = useState("");

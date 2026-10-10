@@ -322,7 +322,7 @@ export default function HomePage({ videos, onSelectVideo, isAdmin, onNavigate }:
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVideos.slice(0, 9).map((vid) => {
+              {filteredVideos.slice(0, 18).map((vid) => {
                 const totalViews = vid.baseViews + vid.realViews;
                 const totalLikes = vid.baseLikes + vid.realLikes;
                 return (

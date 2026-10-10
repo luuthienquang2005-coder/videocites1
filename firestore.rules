@@ -25,5 +25,13 @@ service cloud.firestore {
     match /photoComments/{photoId} {
       allow read, write: if true;
     }
+
+    // Video media binary files & chunks stored in Firestore database for cross-device sharing
+    match /video_media/{videoId} {
+      allow read, write: if true;
+    }
+    match /video_media/{videoId}/chunks/{chunkId} {
+      allow read, write: if true;
+    }
   }
 }

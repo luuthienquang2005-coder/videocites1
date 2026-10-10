@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "motion/react";
 import Logo from "./Logo";
 import { parseVideoSource } from "../utils/videoHelpers";
 import { isIndexedDbUrl, getMediaBlobUrl, getIndexedDbId } from "../utils/indexedDbStorage";
+import { isFirestoreMediaUrl, getFirestoreMediaId, loadVideoBlobFromFirestore } from "../utils/firestoreMediaStorage";
+import VimeoPlayer from "@vimeo/player";
 
 interface VideoPlayerProps {
   src: string;
@@ -28,14 +30,44 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Resolved source if using local indexedDB storage pointer (idb://)
+  // Resolved source if using local indexedDB storage pointer (idb://) or Firestore database pointer (firestore://)
   const [resolvedSrc, setResolvedSrc] = useState<string>(src);
+  const [dbDownloadProgress, setDbDownloadProgress] = useState<number | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  // Vimeo player state and ref
+  const vimeoIframeRef = useRef<HTMLIFrameElement>(null);
+  const vimeoPlayerRef = useRef<VimeoPlayer | null>(null);
+  const [isVimeoMuted, setIsVimeoMuted] = useState(false);
 
   useEffect(() => {
     let active = true;
     let createdUrl: string | null = null;
+    setDbError(null);
 
-    if (isIndexedDbUrl(src)) {
+    if (isFirestoreMediaUrl(src)) {
+      const dbId = getFirestoreMediaId(src);
+      setDbDownloadProgress(0);
+      loadVideoBlobFromFirestore(dbId, (pct) => {
+        if (active) setDbDownloadProgress(pct);
+      }).then((blob) => {
+        if (!active) return;
+        setDbDownloadProgress(null);
+        if (blob) {
+          createdUrl = URL.createObjectURL(blob);
+          setResolvedSrc(createdUrl);
+        } else {
+          setDbError("Không tìm thấy dữ liệu video trong cơ sở dữ liệu.");
+          setResolvedSrc(src);
+        }
+      }).catch((err) => {
+        if (!active) return;
+        console.error("Firestore video load failed:", err);
+        setDbDownloadProgress(null);
+        setDbError("Lỗi kết nối khi tải video từ cơ sở dữ liệu.");
+        setResolvedSrc(src);
+      });
+    } else if (isIndexedDbUrl(src)) {
       const dbId = getIndexedDbId(src);
       getMediaBlobUrl(dbId).then((url) => {
         if (active && url) {
@@ -103,6 +135,62 @@ export default function VideoPlayer({
       setIsLoading(true);
     }
   }, [src, isEmbed]);
+
+  // Vimeo Player SDK initialization: ensures unmuted playback by default
+  useEffect(() => {
+    if (parsedSource.type !== "vimeo" || !vimeoIframeRef.current) return;
+
+    try {
+      const player = new VimeoPlayer(vimeoIframeRef.current);
+      vimeoPlayerRef.current = player;
+
+      player.ready().then(async () => {
+        try {
+          await player.setMuted(false);
+          await player.setVolume(1);
+          setIsVimeoMuted(false);
+        } catch (err) {
+          console.log("Vimeo initial unmute policy check:", err);
+          setIsVimeoMuted(true);
+        }
+      });
+
+      player.on("play", async () => {
+        try {
+          await player.setMuted(false);
+          await player.setVolume(1);
+          setIsVimeoMuted(false);
+        } catch (e) {}
+      });
+
+      player.on("volumechange", (data: { volume: number }) => {
+        if (data.volume === 0) {
+          setIsVimeoMuted(true);
+        } else {
+          setIsVimeoMuted(false);
+        }
+      });
+
+      return () => {
+        player.destroy().catch(() => {});
+      };
+    } catch (err) {
+      console.warn("Vimeo SDK initialization:", err);
+    }
+  }, [parsedSource.type, parsedSource.embedUrl]);
+
+  const handleUnmuteVimeo = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (vimeoPlayerRef.current) {
+      try {
+        await vimeoPlayerRef.current.setMuted(false);
+        await vimeoPlayerRef.current.setVolume(1);
+        setIsVimeoMuted(false);
+      } catch (err) {
+        console.warn("Failed to unmute Vimeo:", err);
+      }
+    }
+  };
 
   // Control visibility timer for direct HTML5 player
   useEffect(() => {
@@ -352,8 +440,33 @@ export default function VideoPlayer({
       onContextMenu={handleContextMenu}
       className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl group border border-gray-200/10 select-none"
     >
-      {/* Loading overlay for direct video */}
-      {!isEmbed && isLoading && (
+      {/* Loading overlay for direct video or Database loading */}
+      {dbDownloadProgress !== null && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/95 z-35 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 max-w-xs text-center px-4">
+            <div className="w-12 h-12 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+            <p className="text-sm text-white font-semibold tracking-wide">Đang nạp video từ Database...</p>
+            <div className="w-52 h-2 bg-white/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 transition-all duration-300 rounded-full" 
+                style={{ width: `${dbDownloadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-blue-400 font-mono">{dbDownloadProgress}% hoàn tất</p>
+          </div>
+        </div>
+      )}
+
+      {dbError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/95 z-35">
+          <div className="flex flex-col items-center gap-2 text-center px-4 max-w-sm">
+            <ShieldAlert className="w-8 h-8 text-rose-500" />
+            <p className="text-sm text-rose-400 font-medium">{dbError}</p>
+          </div>
+        </div>
+      )}
+
+      {!isEmbed && isLoading && dbDownloadProgress === null && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-30">
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 border-4 border-t-amber-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
@@ -364,8 +477,12 @@ export default function VideoPlayer({
 
       {/* RENDER EMBED (YouTube, Vimeo, or generic iframe) */}
       {isEmbed ? (
-        <div className="relative w-full h-full bg-black overflow-hidden group/embed">
+        <div 
+          onClick={parsedSource.type === "vimeo" ? handleUnmuteVimeo : undefined}
+          className="relative w-full h-full bg-black overflow-hidden group/embed"
+        >
           <iframe
+            ref={parsedSource.type === "vimeo" ? vimeoIframeRef : undefined}
             src={parsedSource.embedUrl}
             title="Video Player"
             className={`w-full h-full border-0 ${
@@ -375,9 +492,21 @@ export default function VideoPlayer({
                 ? "transform scale-[1.055] origin-center"
                 : ""
             }`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; volume"
             allowFullScreen
           />
+          {/* Default Unmute Banner for Vimeo if restricted by browser autoplay policy */}
+          {parsedSource.type === "vimeo" && isVimeoMuted && (
+            <button
+              type="button"
+              onClick={handleUnmuteVimeo}
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 bg-blue-600/90 hover:bg-blue-600 text-white text-xs font-semibold rounded-full shadow-lg backdrop-blur-md transition-all cursor-pointer border border-white/20 animate-pulse hover:scale-105"
+            >
+              <Volume2 className="w-4 h-4" />
+              <span>Bật tiếng Vimeo (Unmute)</span>
+            </button>
+          )}
+
           {/* Subtle bottom-right mask to hide Vimeo logo on basic tier players */}
           {parsedSource.type === "vimeo" && (
             <div 

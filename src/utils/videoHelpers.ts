@@ -121,7 +121,7 @@ export function parseVideoSource(rawUrl: string): ParsedVideoSource {
       type: 'vimeo',
       src: targetUrl,
       videoId: vimeoId,
-      embedUrl: `https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=0&color=3b82f6&title=0&byline=0&portrait=0&badge=0&logo=0&vimeo_logo=0`,
+      embedUrl: `https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=0&autopause=0&api=1&player_id=vimeo-player&color=3b82f6&title=0&byline=0&portrait=0&badge=0&logo=0&vimeo_logo=0`,
       thumbnailUrl: `https://vumbnail.com/${vimeoId}.jpg`
     };
   }

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { parseVideoSource, fetchAutoVideoMetadata } from "../utils/videoHelpers";
 import { extractThumbnailFromVideoFile } from "../utils/indexedDbStorage";
 import { uploadVideoToServer, uploadThumbnailDataUrlToServer } from "../utils/mediaUploader";
+import { saveVideoFileToFirestore } from "../utils/firestoreMediaStorage";
 
 interface AdminSeedingPanelProps {
   videos: Video[];
@@ -443,10 +444,15 @@ export default function AdminSeedingPanel({
       let finalCardThumb = finalThumbnail;
       if (card.file) {
         try {
-          const uploadedUrl = await uploadVideoToServer(card.file);
-          cardVideoUrl = uploadedUrl;
+          const dbUrl = await saveVideoFileToFirestore(finalId, card.file);
+          cardVideoUrl = dbUrl;
+          uploadVideoToServer(card.file).catch(() => {});
         } catch (storageErr) {
           console.error("Bulk file upload error:", storageErr);
+          try {
+            const uploadedUrl = await uploadVideoToServer(card.file);
+            cardVideoUrl = uploadedUrl;
+          } catch {}
         }
       }
       if (finalCardThumb.startsWith("data:")) {
@@ -513,21 +519,31 @@ export default function AdminSeedingPanel({
       let finalMediaUrl = mediaUrl;
       let finalThumbnail = thumbnailUrl || "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=800&q=80";
 
-      // If user selected a local file from disk, upload to server storage so everyone can access
+      // If user selected a local file from disk, upload directly into Firestore Database
       if (pendingLocalFile) {
         setIsProcessingUpload(true);
         setUploadProgress(0);
-        triggerToast("Đang tải video lên máy chủ và lưu vào cơ sở dữ liệu...");
+        triggerToast("Đang lưu video trực tiếp vào database...");
         try {
-          const uploadedUrl = await uploadVideoToServer(pendingLocalFile, (percent) => {
+          const dbUrl = await saveVideoFileToFirestore(finalId, pendingLocalFile, (percent) => {
             setUploadProgress(percent);
           });
-          finalMediaUrl = uploadedUrl;
-        } catch (storageErr: any) {
-          console.error("Server upload error:", storageErr);
-          triggerToast(`Lỗi tải video lên máy chủ: ${storageErr.message || "Thử lại"}`);
-          setIsProcessingUpload(false);
-          return;
+          finalMediaUrl = dbUrl;
+          uploadVideoToServer(pendingLocalFile).catch(() => {});
+          triggerToast("Đã lưu video thành công vào database!");
+        } catch (dbErr: any) {
+          console.error("Firestore video save error:", dbErr);
+          try {
+            const uploadedUrl = await uploadVideoToServer(pendingLocalFile, (percent) => {
+              setUploadProgress(percent);
+            });
+            finalMediaUrl = uploadedUrl;
+          } catch (storageErr: any) {
+            console.error("Server upload error:", storageErr);
+            triggerToast(`Lỗi lưu video vào database: ${dbErr.message || storageErr.message || "Thử lại"}`);
+            setIsProcessingUpload(false);
+            return;
+          }
         } finally {
           setIsProcessingUpload(false);
         }
@@ -575,7 +591,7 @@ export default function AdminSeedingPanel({
           ...selectedVideo,
           id: finalId,
           title: title,
-          videoUrl: mediaUrl,
+          videoUrl: finalMediaUrl,
           thumbnailUrl: finalThumbnail,
           duration: duration,
           category: category,
@@ -592,7 +608,7 @@ export default function AdminSeedingPanel({
           backdatedDate: isoDate,
           description: description
         };
-        onUpdateVideo(updatedVideo, selectedVideo.id);
+        await onUpdateVideo(updatedVideo, selectedVideo.id);
         setSelectedVideoId(finalId);
         setJustPublishedMedia({ id: finalId, title: title, type: "video" });
         triggerToast("Updated video details successfully!");
@@ -1915,7 +1931,7 @@ export default function AdminSeedingPanel({
                     {isProcessingUpload ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                        <span>Đang tải lên ({uploadProgress}%)...</span>
+                        <span>Đang lưu vào Database ({uploadProgress}%)...</span>
                       </>
                     ) : activeTab === "add" ? (
                       <>
@@ -2044,9 +2060,22 @@ export default function AdminSeedingPanel({
                       />
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-800 dark:text-white truncate">{vid.title}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono mt-0.5">
-                          {vid.author?.name || "Admin"} • {displayViews.toLocaleString()} views
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
+                            {vid.author?.name || "Admin"} • {displayViews.toLocaleString()} views
+                          </span>
+                          <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                            vid.videoUrl.startsWith('/uploads') 
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                              : vid.videoUrl.includes('youtube') || vid.videoUrl.includes('youtu.be')
+                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                              : vid.videoUrl.includes('vimeo')
+                              ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                          }`}>
+                            {vid.videoUrl.startsWith('/uploads') ? 'Server Upload' : vid.videoUrl.includes('youtube') ? 'YouTube' : vid.videoUrl.includes('vimeo') ? 'Vimeo' : 'Direct MP4'}
+                          </span>
+                        </div>
                       </div>
                     </div>
 

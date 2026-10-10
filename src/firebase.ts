@@ -14,6 +14,7 @@ import { Video, VideoComment, Photo, PhotoComment } from "./types";
 import { INITIAL_VIDEOS, MOCK_COMMENTS, INITIAL_PHOTOS } from "./data";
 import { generateCommentsForVideo, generateCommentsForPhoto } from "./utils/commentGenerator";
 import { deleteMediaBlob } from "./utils/indexedDbStorage";
+import { deleteVideoMediaFromFirestore } from "./utils/firestoreMediaStorage";
 
 // Load configuration from firebase-applet-config.json
 import firebaseConfig from "../firebase-applet-config.json";
@@ -480,6 +481,7 @@ export async function deleteVideoFromFirestore(videoId: string) {
     if (videoId) {
       deleteMediaBlob(videoId);
       deleteMediaBlob(`thumb-${videoId}`);
+      deleteVideoMediaFromFirestore(videoId).catch(() => {});
     }
     await deleteDoc(doc(db, "videos", videoId));
     await deleteDoc(doc(db, "comments", videoId));
