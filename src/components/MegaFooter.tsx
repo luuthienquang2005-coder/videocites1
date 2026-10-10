@@ -126,14 +126,24 @@ export default function MegaFooter({ onNavigate }: MegaFooterProps) {
             <span>© 2026 Videocites ID LTD. All rights reserved.</span>
             <div className="inline-flex items-center justify-center sm:justify-start">
               <a
-                href="//www.dmca.com/Protection/Status.aspx?ID=ee910264-d053-4137-8671-a313f344dcaf"
+                href="https://www.dmca.com/Protection/Status.aspx?ID=ae10acc7-54df-4b66-b72c-3acd350e1fda"
                 title="DMCA.com Protection Status"
                 className="dmca-badge inline-block hover:opacity-90 transition-opacity"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  try {
+                    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+                    if (currentUrl) {
+                      e.currentTarget.href = `https://www.dmca.com/Protection/Status.aspx?ID=ae10acc7-54df-4b66-b72c-3acd350e1fda&refurl=${encodeURIComponent(currentUrl)}`;
+                    }
+                  } catch (err) {
+                    // Ignore
+                  }
+                }}
               >
                 <img
-                  src="https://images.dmca.com/Badges/dmca_protected_sml_120m.png?ID=ee910264-d053-4137-8671-a313f344dcaf"
+                  src="https://images.dmca.com/Badges/dmca_protected_sml_120m.png?ID=ae10acc7-54df-4b66-b72c-3acd350e1fda"
                   alt="DMCA.com Protection Status"
                   className="h-6 w-auto object-contain inline-block"
                   loading="lazy"
