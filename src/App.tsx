@@ -297,13 +297,15 @@ export default function App() {
   const handleAddVideo = async (newVideo: Video, customCommentCount?: number) => {
     try {
       setVideos((prev) => [newVideo, ...prev]);
-      await saveVideoToFirestore(newVideo);
       const randomCount = (typeof customCommentCount === "number" && customCommentCount > 0)
         ? customCommentCount
         : Math.floor(Math.random() * 11) + 20; // 20-30 comments
       const generatedComments = generateCommentsForVideo(newVideo, randomCount);
       setComments((prev) => ({ ...prev, [newVideo.id]: generatedComments }));
-      await saveCommentsToFirestore(newVideo.id, generatedComments);
+      await Promise.all([
+        saveVideoToFirestore(newVideo),
+        saveCommentsToFirestore(newVideo.id, generatedComments)
+      ]);
     } catch (e) {
       console.error("Failed to add video to Firestore:", e);
     }

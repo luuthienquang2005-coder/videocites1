@@ -1947,6 +1947,20 @@ export default function AdminSeedingPanel({
                   </button>
                 </div>
 
+                {isProcessingUpload && (
+                  <div className="w-full max-w-md mx-auto pt-2 space-y-1.5 text-center">
+                    <div className="w-full h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden shadow-inner">
+                      <div 
+                        className="h-full bg-blue-600 transition-all duration-200 rounded-full shadow-sm"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-blue-600 dark:text-blue-400 font-mono font-medium">
+                      Tốc độ cao đa luồng song song (6 streams) • {uploadProgress}% hoàn tất
+                    </p>
+                  </div>
+                )}
+
               </form>
             </div>
 
