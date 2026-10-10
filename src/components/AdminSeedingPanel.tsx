@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { parseVideoSource, fetchAutoVideoMetadata } from "../utils/videoHelpers";
-import { storeMediaBlob, extractThumbnailFromVideoFile } from "../utils/indexedDbStorage";
+import { extractThumbnailFromVideoFile } from "../utils/indexedDbStorage";
+import { uploadVideoToServer, uploadThumbnailDataUrlToServer } from "../utils/mediaUploader";
 
 interface AdminSeedingPanelProps {
   videos: Video[];
@@ -121,6 +122,7 @@ export default function AdminSeedingPanel({
   const [slug, setSlug] = useState("");
   const [pendingLocalFile, setPendingLocalFile] = useState<File | null>(null);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   // ----------------------------------------------------
   // Bulk Video Upload State (Global Shared Settings)
@@ -438,20 +440,26 @@ export default function AdminSeedingPanel({
       const finalCommentsCount = generateRandomStats ? card.commentsCount : (card.commentsCount || 25);
 
       let cardVideoUrl = card.videoUrl;
+      let finalCardThumb = finalThumbnail;
       if (card.file) {
         try {
-          await storeMediaBlob(finalId, card.file, card.file.name);
-          cardVideoUrl = `idb://${finalId}`;
+          const uploadedUrl = await uploadVideoToServer(card.file);
+          cardVideoUrl = uploadedUrl;
         } catch (storageErr) {
-          console.error("Bulk file storage error:", storageErr);
+          console.error("Bulk file upload error:", storageErr);
         }
+      }
+      if (finalCardThumb.startsWith("data:")) {
+        try {
+          finalCardThumb = await uploadThumbnailDataUrlToServer(finalCardThumb);
+        } catch {}
       }
 
       const newVideo: Video = {
         id: finalId,
         title: card.title,
         videoUrl: cardVideoUrl,
-        thumbnailUrl: finalThumbnail,
+        thumbnailUrl: finalCardThumb,
         duration: card.duration || "10:00",
         category: sharedCategory,
         tags: ["Bulk Upload", "Masterclass", "Official", sharedCategory],
@@ -505,18 +513,31 @@ export default function AdminSeedingPanel({
       let finalMediaUrl = mediaUrl;
       let finalThumbnail = thumbnailUrl || "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=800&q=80";
 
-      // If user selected a local file from disk, persist it to IndexedDB
+      // If user selected a local file from disk, upload to server storage so everyone can access
       if (pendingLocalFile) {
         setIsProcessingUpload(true);
-        triggerToast("Đang lưu trữ video vào bộ nhớ hệ thống...");
+        setUploadProgress(0);
+        triggerToast("Đang tải video lên máy chủ và lưu vào cơ sở dữ liệu...");
         try {
-          await storeMediaBlob(finalId, pendingLocalFile, pendingLocalFile.name);
-          finalMediaUrl = `idb://${finalId}`;
-        } catch (storageErr) {
-          console.error("IndexedDB store error:", storageErr);
+          const uploadedUrl = await uploadVideoToServer(pendingLocalFile, (percent) => {
+            setUploadProgress(percent);
+          });
+          finalMediaUrl = uploadedUrl;
+        } catch (storageErr: any) {
+          console.error("Server upload error:", storageErr);
+          triggerToast(`Lỗi tải video lên máy chủ: ${storageErr.message || "Thử lại"}`);
+          setIsProcessingUpload(false);
+          return;
         } finally {
           setIsProcessingUpload(false);
         }
+      }
+
+      // If thumbnail is a base64 Data URL, upload it to server
+      if (finalThumbnail.startsWith("data:")) {
+        try {
+          finalThumbnail = await uploadThumbnailDataUrlToServer(finalThumbnail);
+        } catch {}
       }
 
       if (activeTab === "add") {
@@ -1894,7 +1915,7 @@ export default function AdminSeedingPanel({
                     {isProcessingUpload ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                        <span>Đang lưu trữ Media...</span>
+                        <span>Đang tải lên ({uploadProgress}%)...</span>
                       </>
                     ) : activeTab === "add" ? (
                       <>
