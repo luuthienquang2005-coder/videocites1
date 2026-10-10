@@ -9,6 +9,7 @@ import {
   Sliders, PlusCircle, AlertCircle, Loader2, Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { parseVideoSource } from "../utils/videoHelpers";
 
 interface AdminSeedingPanelProps {
   videos: Video[];
@@ -37,12 +38,13 @@ interface BulkVideoCardItem {
 
 // Sample video assets for quick testing
 const SAMPLE_VIDEOS = [
-  { name: "Subaru Outback (Cinematic)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4" },
-  { name: "Sintel Movie (Animation)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
-  { name: "Big Buck Bunny (Nature)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" },
-  { name: "Tears of Steel (Sci-Fi)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" },
-  { name: "Elephants Dream (Surreal)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
-  { name: "For Bigger Blazes (Action)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" }
+  { name: "YouTube: Blender Open Movie", url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ" },
+  { name: "YouTube: Nature 4K Demo", url: "https://www.youtube.com/watch?v=LXb3EKWsInQ" },
+  { name: "Vimeo: The Mountain (Time-Lapse)", url: "https://vimeo.com/22439234" },
+  { name: "Subaru Outback (Direct MP4)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4" },
+  { name: "Sintel Movie (Direct MP4)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
+  { name: "Big Buck Bunny (Direct MP4)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" },
+  { name: "Tears of Steel (Sci-Fi MP4)", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" }
 ];
 
 // Helper to generate realistic stats
@@ -318,15 +320,13 @@ export default function AdminSeedingPanel({
     );
   };
 
-  // Fetch thumbnail for a bulk card (from YouTube URL or Unsplash category)
+  // Fetch thumbnail for a bulk card (from YouTube/Vimeo URL or Unsplash category)
   const handleAutoFetchBulkThumbnail = (card: BulkVideoCardItem) => {
     if (card.videoUrl) {
-      const ytReg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-      const match = card.videoUrl.match(ytReg);
-      if (match && match[1]) {
-        const ytId = match[1];
-        handleUpdateBulkCardField(card.tempId, "thumbnailUrl", `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`);
-        triggerToast("Extracted cover image from YouTube link!");
+      const parsed = parseVideoSource(card.videoUrl);
+      if (parsed.thumbnailUrl) {
+        handleUpdateBulkCardField(card.tempId, "thumbnailUrl", parsed.thumbnailUrl);
+        triggerToast(`Extracted cover image from ${parsed.type.toUpperCase()}!`);
         return;
       }
     }
@@ -1116,14 +1116,24 @@ export default function AdminSeedingPanel({
                         {/* 2. VIDEO URL / FILE UPLOAD */}
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
-                            <span>Video URL / File Source</span>
-                            <span className="text-[10px] text-blue-500 font-mono font-semibold">MP4 / Stream</span>
+                            <span>Video URL / Embed / File</span>
+                            <span className="text-[10px] text-blue-500 font-mono font-semibold">YouTube / Vimeo / MP4</span>
                           </label>
                           <input
                             type="text"
                             value={card.videoUrl}
-                            onChange={(e) => handleUpdateBulkCardField(card.tempId, "videoUrl", e.target.value)}
-                            placeholder="https://commondatastorage.googleapis.com/..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleUpdateBulkCardField(card.tempId, "videoUrl", val);
+                              // Auto set thumbnail if it's YouTube or Vimeo and thumbnail is currently blank
+                              if (val && !card.thumbnailUrl) {
+                                const parsed = parseVideoSource(val);
+                                if (parsed.thumbnailUrl) {
+                                  handleUpdateBulkCardField(card.tempId, "thumbnailUrl", parsed.thumbnailUrl);
+                                }
+                              }
+                            }}
+                            placeholder="YouTube, Vimeo, iframe embed code, or MP4 URL..."
                             className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
                             required
                           />
@@ -1430,13 +1440,26 @@ export default function AdminSeedingPanel({
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
-                      <span>{mediaType === "video" ? "Video URL" : "Photo/Image URL"}</span>
+                      <span>{mediaType === "video" ? "Video URL / Embed / File" : "Photo/Image URL"}</span>
+                      {mediaType === "video" && (
+                        <span className="text-[10px] text-blue-500 font-mono font-semibold">YouTube / Vimeo / MP4</span>
+                      )}
                     </label>
                     <input
                       type="text"
                       value={mediaUrl}
-                      onChange={(e) => setMediaUrl(e.target.value)}
-                      placeholder="https://"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setMediaUrl(val);
+                        if (mediaType === "video" && val) {
+                          const parsed = parseVideoSource(val);
+                          if (parsed.thumbnailUrl && (!thumbnailUrl || thumbnailUrl.includes("unsplash.com/photo-1506318137071"))) {
+                            setThumbnailUrl(parsed.thumbnailUrl);
+                            triggerToast(`Auto-filled thumbnail from ${parsed.type.toUpperCase()}!`);
+                          }
+                        }
+                      }}
+                      placeholder={mediaType === "video" ? "YouTube, Vimeo, iframe embed code, or MP4 URL..." : "https://"}
                       className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all font-mono"
                       required
                     />
