@@ -169,13 +169,29 @@ export default function MegaFooter({ onNavigate, theme, onToggleTheme }: MegaFoo
         </div>
 
         {/* Bottom Line */}
-        <div className={`mt-16 pt-8 border-t text-xs flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors duration-300 ${
+        <div className={`mt-16 pt-8 border-t text-xs flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors duration-300 ${
           isLight ? "border-slate-200" : "border-neutral-800 dark:border-neutral-900/60"
         }`}>
-          <div className={`font-sans text-center sm:text-left ${isLight ? "text-slate-600" : "text-neutral-500 dark:text-neutral-600"}`}>
+          <div className={`font-sans text-center sm:text-left flex flex-col sm:flex-row sm:items-center gap-3 ${isLight ? "text-slate-600" : "text-neutral-500 dark:text-neutral-600"}`}>
             <span>© 2026 Videocites ID LTD. All rights reserved.</span>
+            <div className="inline-flex items-center justify-center sm:justify-start">
+              <a
+                href="//www.dmca.com/Protection/Status.aspx?ID=ee910264-d053-4137-8671-a313f344dcaf"
+                title="DMCA.com Protection Status"
+                className="dmca-badge inline-block hover:opacity-90 transition-opacity"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src="https://images.dmca.com/Badges/dmca_protected_sml_120m.png?ID=ee910264-d053-4137-8671-a313f344dcaf"
+                  alt="DMCA.com Protection Status"
+                  className="h-6 w-auto object-contain inline-block"
+                  loading="lazy"
+                />
+              </a>
+            </div>
           </div>
-          <div className={`flex gap-6 font-mono text-[11px] ${isLight ? "text-slate-600" : "text-neutral-500 dark:text-neutral-600"}`}>
+          <div className={`flex items-center gap-6 font-mono text-[11px] ${isLight ? "text-slate-600" : "text-neutral-500 dark:text-neutral-600"}`}>
             <span>SECURE MD5 CERTIFIED</span>
             <span>UHD STREAM V2.4</span>
           </div>
