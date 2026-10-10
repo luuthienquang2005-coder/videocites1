@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import Logo from "./Logo";
 import { parseVideoSource } from "../utils/videoHelpers";
+import { isIndexedDbUrl, getMediaBlobUrl, getIndexedDbId } from "../utils/indexedDbStorage";
 
 interface VideoPlayerProps {
   src: string;
@@ -27,8 +28,37 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Resolved source if using local indexedDB storage pointer (idb://)
+  const [resolvedSrc, setResolvedSrc] = useState<string>(src);
+
+  useEffect(() => {
+    let active = true;
+    let createdUrl: string | null = null;
+
+    if (isIndexedDbUrl(src)) {
+      const dbId = getIndexedDbId(src);
+      getMediaBlobUrl(dbId).then((url) => {
+        if (active && url) {
+          createdUrl = url;
+          setResolvedSrc(url);
+        } else if (active) {
+          setResolvedSrc(src);
+        }
+      });
+    } else {
+      setResolvedSrc(src);
+    }
+
+    return () => {
+      active = false;
+      if (createdUrl) {
+        URL.revokeObjectURL(createdUrl);
+      }
+    };
+  }, [src]);
+
   // Parse source into YouTube, Vimeo, iframe or direct HTML5 video
-  const parsedSource = useMemo(() => parseVideoSource(src), [src]);
+  const parsedSource = useMemo(() => parseVideoSource(resolvedSrc), [resolvedSrc]);
   const isEmbed = parsedSource.type === "youtube" || parsedSource.type === "vimeo" || parsedSource.type === "iframe";
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -377,7 +407,7 @@ export default function VideoPlayer({
         <>
           <video
             ref={videoRef}
-            src={src}
+            src={resolvedSrc}
             poster={poster}
             muted={false}
             onTimeUpdate={handleTimeUpdate}

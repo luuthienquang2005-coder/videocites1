@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { parseVideoSource, fetchAutoVideoMetadata } from "../utils/videoHelpers";
+import { storeMediaBlob, extractThumbnailFromVideoFile } from "../utils/indexedDbStorage";
 
 interface AdminSeedingPanelProps {
   videos: Video[];
@@ -34,6 +35,7 @@ interface BulkVideoCardItem {
   likes: number;
   dislikes: number;
   commentsCount: number;
+  file?: File;
 }
 
 // Sample video assets for quick testing
@@ -117,6 +119,8 @@ export default function AdminSeedingPanel({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Film & Cinema");
   const [slug, setSlug] = useState("");
+  const [pendingLocalFile, setPendingLocalFile] = useState<File | null>(null);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
 
   // ----------------------------------------------------
   // Bulk Video Upload State (Global Shared Settings)
@@ -173,6 +177,7 @@ export default function AdminSeedingPanel({
     setViews(Math.floor(Math.random() * 450000) + 1200);
     setCategory("Film & Cinema");
     setSlug("");
+    setPendingLocalFile(null);
 
     if (type === "video") {
       setMediaUrl("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4");
@@ -388,6 +393,7 @@ export default function AdminSeedingPanel({
         thumbnailUrl: thumb,
         duration: detectedDuration,
         slug: "",
+        file: file,
         ...stats
       };
     });
@@ -431,10 +437,20 @@ export default function AdminSeedingPanel({
       const finalDislikes = generateRandomStats ? card.dislikes : (card.dislikes || 10);
       const finalCommentsCount = generateRandomStats ? card.commentsCount : (card.commentsCount || 25);
 
+      let cardVideoUrl = card.videoUrl;
+      if (card.file) {
+        try {
+          await storeMediaBlob(finalId, card.file, card.file.name);
+          cardVideoUrl = `idb://${finalId}`;
+        } catch (storageErr) {
+          console.error("Bulk file storage error:", storageErr);
+        }
+      }
+
       const newVideo: Video = {
         id: finalId,
         title: card.title,
-        videoUrl: card.videoUrl,
+        videoUrl: cardVideoUrl,
         thumbnailUrl: finalThumbnail,
         duration: card.duration || "10:00",
         category: sharedCategory,
@@ -473,7 +489,7 @@ export default function AdminSeedingPanel({
   // ----------------------------------------------------
   // Single Video / Photo Form Submission
   // ----------------------------------------------------
-  const handleSubmitForm = (e: React.FormEvent) => {
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !mediaUrl || !authorName) return;
 
@@ -486,13 +502,28 @@ export default function AdminSeedingPanel({
     const finalId = slug.trim() ? slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-") : generatedId;
 
     if (mediaType === "video") {
-      const finalThumbnail = thumbnailUrl || "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=800&q=80";
-      
+      let finalMediaUrl = mediaUrl;
+      let finalThumbnail = thumbnailUrl || "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=800&q=80";
+
+      // If user selected a local file from disk, persist it to IndexedDB
+      if (pendingLocalFile) {
+        setIsProcessingUpload(true);
+        triggerToast("Đang lưu trữ video vào bộ nhớ hệ thống...");
+        try {
+          await storeMediaBlob(finalId, pendingLocalFile, pendingLocalFile.name);
+          finalMediaUrl = `idb://${finalId}`;
+        } catch (storageErr) {
+          console.error("IndexedDB store error:", storageErr);
+        } finally {
+          setIsProcessingUpload(false);
+        }
+      }
+
       if (activeTab === "add") {
         const newVideo: Video = {
           id: finalId,
           title: title,
-          videoUrl: mediaUrl,
+          videoUrl: finalMediaUrl,
           thumbnailUrl: finalThumbnail,
           duration: duration || "12:45",
           category: category,
@@ -513,7 +544,7 @@ export default function AdminSeedingPanel({
           backdatedDate: isoDate,
           description: description
         };
-        onAddVideo(newVideo);
+        await onAddVideo(newVideo);
         setJustPublishedMedia({ id: finalId, title: title, type: "video" });
         triggerToast("Published new copyrighted video successfully!");
         setAddDefaults("video");
@@ -1165,6 +1196,7 @@ export default function AdminSeedingPanel({
                                   const file = e.target.files?.[0];
                                   if (file) {
                                     handleUpdateBulkCardField(card.tempId, "videoUrl", URL.createObjectURL(file));
+                                    handleUpdateBulkCardField(card.tempId, "file", file);
                                     if (!card.title) {
                                       handleUpdateBulkCardField(card.tempId, "title", file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "));
                                     }
@@ -1501,19 +1533,28 @@ export default function AdminSeedingPanel({
                     <div className="flex gap-2">
                       <label className="flex-1 py-1.5 px-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-blue-500/20 text-center">
                         <UploadCloud className="w-3.5 h-3.5" />
-                        <span>Chọn File MP4 từ máy</span>
+                        <span>{pendingLocalFile ? `Đã chọn: ${pendingLocalFile.name.slice(0, 15)}...` : "Chọn File MP4 từ máy"}</span>
                         <input
                           type="file"
                           accept="video/mp4,video/*"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
+                              setPendingLocalFile(file);
                               const blobUrl = URL.createObjectURL(file);
                               setMediaUrl(blobUrl);
                               if (!title) {
                                 setTitle(file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "));
                               }
-                              triggerToast(`Đã nạp file video "${file.name}" trực tiếp!`);
+                              triggerToast(`Đang phân tích file "${file.name}"...`);
+                              // Try to auto-capture video thumbnail frame
+                              try {
+                                const frame = await extractThumbnailFromVideoFile(file);
+                                if (frame) {
+                                  setThumbnailUrl(frame);
+                                }
+                              } catch {}
+                              triggerToast(`Đã sẵn sàng tải file video "${file.name}"!`);
                             }
                           }}
                           className="hidden"
@@ -1653,6 +1694,28 @@ export default function AdminSeedingPanel({
                         className="w-full bg-slate-50 dark:bg-[#141414] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-[#181818] transition-all font-mono"
                         required
                       />
+                      <label className="py-1 px-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[10px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5 w-fit">
+                        <UploadCloud className="w-3 h-3 text-blue-500" />
+                        <span>Chọn ảnh bìa từ máy</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                if (typeof reader.result === "string") {
+                                  setThumbnailUrl(reader.result);
+                                  triggerToast("Đã tải ảnh bìa thành công!");
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1825,9 +1888,15 @@ export default function AdminSeedingPanel({
 
                   <button
                     type="submit"
-                    className="bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200 font-extrabold text-xs tracking-wider uppercase py-3.5 px-10 rounded-full flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-lg active:scale-95"
+                    disabled={isProcessingUpload}
+                    className="bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200 disabled:opacity-50 font-extrabold text-xs tracking-wider uppercase py-3.5 px-10 rounded-full flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:cursor-not-allowed shadow-lg active:scale-95"
                   >
-                    {activeTab === "add" ? (
+                    {isProcessingUpload ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        <span>Đang lưu trữ Media...</span>
+                      </>
+                    ) : activeTab === "add" ? (
                       <>
                         <span>Publish {mediaType === "video" ? "Video" : "Photo"}</span>
                         <ArrowUp className="w-4 h-4" />
