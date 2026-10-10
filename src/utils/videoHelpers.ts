@@ -109,7 +109,7 @@ export function parseVideoSource(rawUrl: string): ParsedVideoSource {
       type: 'youtube',
       src: targetUrl,
       videoId: ytId,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=0&enablejsapi=1&rel=0&modestbranding=1`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=0&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3`,
       thumbnailUrl: `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`
     };
   }

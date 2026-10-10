@@ -1499,6 +1499,27 @@ export default function AdminSeedingPanel({
                     />
                     
                     <div className="flex gap-2">
+                      <label className="flex-1 py-1.5 px-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-blue-500/20 text-center">
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>Chọn File MP4 từ máy</span>
+                        <input
+                          type="file"
+                          accept="video/mp4,video/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const blobUrl = URL.createObjectURL(file);
+                              setMediaUrl(blobUrl);
+                              if (!title) {
+                                setTitle(file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "));
+                              }
+                              triggerToast(`Đã nạp file video "${file.name}" trực tiếp!`);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1512,7 +1533,7 @@ export default function AdminSeedingPanel({
                         className="flex-1 py-1.5 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-neutral-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-white/5"
                       >
                         <Eye className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>Test Attachment Link</span>
+                        <span>Test Link</span>
                       </button>
 
                       {mediaType === "video" && (

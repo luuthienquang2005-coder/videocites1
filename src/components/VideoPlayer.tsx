@@ -341,6 +341,8 @@ export default function VideoPlayer({
             className={`w-full h-full border-0 ${
               parsedSource.type === "vimeo" 
                 ? "transform scale-[1.035] origin-center" 
+                : parsedSource.type === "youtube"
+                ? "transform scale-[1.055] origin-center"
                 : ""
             }`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -352,6 +354,22 @@ export default function VideoPlayer({
               className="absolute bottom-0 right-0 w-24 h-12 pointer-events-none bg-gradient-to-tl from-black/85 via-black/40 to-transparent z-10"
               aria-hidden="true"
             />
+          )}
+
+          {/* YouTube Cinema Clean Masks: softens and conceals top channel/title bar and bottom-right YouTube logo */}
+          {parsedSource.type === "youtube" && (
+            <>
+              {/* Top mask for YouTube Title & Channel */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-16 pointer-events-none bg-gradient-to-b from-black/90 via-black/40 to-transparent z-10"
+                aria-hidden="true"
+              />
+              {/* Bottom-right mask for YouTube Logo & Channel Watermark */}
+              <div 
+                className="absolute bottom-0 right-0 w-36 h-14 pointer-events-none bg-gradient-to-tl from-black/90 via-black/40 to-transparent z-10"
+                aria-hidden="true"
+              />
+            </>
           )}
         </div>
       ) : (
