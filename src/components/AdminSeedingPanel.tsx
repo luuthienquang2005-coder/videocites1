@@ -9,7 +9,7 @@ import {
   Sliders, PlusCircle, AlertCircle, Loader2, Play
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { parseVideoSource } from "../utils/videoHelpers";
+import { parseVideoSource, fetchAutoVideoMetadata } from "../utils/videoHelpers";
 
 interface AdminSeedingPanelProps {
   videos: Video[];
@@ -320,14 +320,25 @@ export default function AdminSeedingPanel({
     );
   };
 
-  // Fetch thumbnail for a bulk card (from YouTube/Vimeo URL or Unsplash category)
-  const handleAutoFetchBulkThumbnail = (card: BulkVideoCardItem) => {
+  // Fetch metadata for a bulk card (duration, cover image, and title from YouTube/Vimeo/Direct video or Unsplash)
+  const handleAutoFetchBulkThumbnail = async (card: BulkVideoCardItem) => {
     if (card.videoUrl) {
-      const parsed = parseVideoSource(card.videoUrl);
-      if (parsed.thumbnailUrl) {
-        handleUpdateBulkCardField(card.tempId, "thumbnailUrl", parsed.thumbnailUrl);
-        triggerToast(`Extracted cover image from ${parsed.type.toUpperCase()}!`);
+      triggerToast("Detecting video duration & cover image...");
+      try {
+        const meta = await fetchAutoVideoMetadata(card.videoUrl);
+        if (meta.thumbnailUrl) {
+          handleUpdateBulkCardField(card.tempId, "thumbnailUrl", meta.thumbnailUrl);
+        }
+        if (meta.durationFormatted) {
+          handleUpdateBulkCardField(card.tempId, "duration", meta.durationFormatted);
+        }
+        if (meta.title && (!card.title || card.title === "New Video Item")) {
+          handleUpdateBulkCardField(card.tempId, "title", meta.title);
+        }
+        triggerToast(`Auto-detected: ${meta.durationFormatted ? `Duration (${meta.durationFormatted}) & ` : ""}Cover!`);
         return;
+      } catch (err) {
+        console.error("Auto fetch error:", err);
       }
     }
 
@@ -1122,14 +1133,19 @@ export default function AdminSeedingPanel({
                           <input
                             type="text"
                             value={card.videoUrl}
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const val = e.target.value;
                               handleUpdateBulkCardField(card.tempId, "videoUrl", val);
-                              // Auto set thumbnail if it's YouTube or Vimeo and thumbnail is currently blank
-                              if (val && !card.thumbnailUrl) {
-                                const parsed = parseVideoSource(val);
-                                if (parsed.thumbnailUrl) {
-                                  handleUpdateBulkCardField(card.tempId, "thumbnailUrl", parsed.thumbnailUrl);
+                              if (val.trim()) {
+                                const meta = await fetchAutoVideoMetadata(val);
+                                if (meta.thumbnailUrl && !card.thumbnailUrl) {
+                                  handleUpdateBulkCardField(card.tempId, "thumbnailUrl", meta.thumbnailUrl);
+                                }
+                                if (meta.durationFormatted) {
+                                  handleUpdateBulkCardField(card.tempId, "duration", meta.durationFormatted);
+                                }
+                                if (meta.title && (!card.title || card.title === "New Video Item")) {
+                                  handleUpdateBulkCardField(card.tempId, "title", meta.title);
                                 }
                               }
                             }}
@@ -1161,10 +1177,18 @@ export default function AdminSeedingPanel({
 
                             <div className="relative flex-1">
                               <select
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   if (e.target.value) {
-                                    handleUpdateBulkCardField(card.tempId, "videoUrl", e.target.value);
-                                    triggerToast("Assigned sample video!");
+                                    const val = e.target.value;
+                                    handleUpdateBulkCardField(card.tempId, "videoUrl", val);
+                                    const meta = await fetchAutoVideoMetadata(val);
+                                    if (meta.thumbnailUrl) {
+                                      handleUpdateBulkCardField(card.tempId, "thumbnailUrl", meta.thumbnailUrl);
+                                    }
+                                    if (meta.durationFormatted) {
+                                      handleUpdateBulkCardField(card.tempId, "duration", meta.durationFormatted);
+                                    }
+                                    triggerToast("Assigned sample video with auto duration!");
                                     e.target.value = "";
                                   }
                                 }}
@@ -1448,14 +1472,24 @@ export default function AdminSeedingPanel({
                     <input
                       type="text"
                       value={mediaUrl}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
                         setMediaUrl(val);
-                        if (mediaType === "video" && val) {
-                          const parsed = parseVideoSource(val);
-                          if (parsed.thumbnailUrl && (!thumbnailUrl || thumbnailUrl.includes("unsplash.com/photo-1506318137071"))) {
-                            setThumbnailUrl(parsed.thumbnailUrl);
-                            triggerToast(`Auto-filled thumbnail from ${parsed.type.toUpperCase()}!`);
+                        if (mediaType === "video" && val.trim()) {
+                          try {
+                            const meta = await fetchAutoVideoMetadata(val);
+                            if (meta.thumbnailUrl && (!thumbnailUrl || thumbnailUrl.includes("unsplash.com/photo-1506318137071"))) {
+                              setThumbnailUrl(meta.thumbnailUrl);
+                            }
+                            if (meta.durationFormatted) {
+                              setDuration(meta.durationFormatted);
+                              triggerToast(`Auto-detected duration: ${meta.durationFormatted}!`);
+                            }
+                            if (meta.title && (!title || title === "New Video Item")) {
+                              setTitle(meta.title);
+                            }
+                          } catch (err) {
+                            console.warn("Auto metadata error:", err);
                           }
                         }
                       }}
@@ -1484,10 +1518,14 @@ export default function AdminSeedingPanel({
                       {mediaType === "video" && (
                         <div className="relative flex-1">
                           <select
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               if (e.target.value) {
-                                setMediaUrl(e.target.value);
-                                triggerToast("High-quality sample video source selected!");
+                                const val = e.target.value;
+                                setMediaUrl(val);
+                                const meta = await fetchAutoVideoMetadata(val);
+                                if (meta.thumbnailUrl) setThumbnailUrl(meta.thumbnailUrl);
+                                if (meta.durationFormatted) setDuration(meta.durationFormatted);
+                                triggerToast("Sample video selected with auto duration!");
                                 e.target.value = "";
                               }
                             }}
@@ -1565,7 +1603,26 @@ export default function AdminSeedingPanel({
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
                         <span>Thumbnail URL</span>
-                        <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">Auto / Upload</span>
+                        {mediaUrl ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const meta = await fetchAutoVideoMetadata(mediaUrl);
+                              if (meta.thumbnailUrl) {
+                                setThumbnailUrl(meta.thumbnailUrl);
+                                triggerToast("Extracted video thumbnail cover!");
+                              } else {
+                                triggerToast("No thumbnail found for this URL.");
+                              }
+                            }}
+                            className="text-[10px] text-blue-500 hover:text-blue-400 font-bold lowercase flex items-center gap-1 cursor-pointer"
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>Auto Cover</span>
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-blue-500 dark:text-blue-400 lowercase font-semibold">Auto / Upload</span>
+                        )}
                       </label>
                       <input
                         type="text"
@@ -1605,8 +1662,27 @@ export default function AdminSeedingPanel({
 
                   {mediaType === "video" ? (
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide">
-                        Duration
+                      <label className="text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wide flex justify-between items-center">
+                        <span>Duration</span>
+                        {mediaUrl && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              triggerToast("Detecting video duration...");
+                              const meta = await fetchAutoVideoMetadata(mediaUrl);
+                              if (meta.durationFormatted) {
+                                setDuration(meta.durationFormatted);
+                                triggerToast(`Detected duration: ${meta.durationFormatted}`);
+                              } else {
+                                triggerToast("Could not detect duration automatically.");
+                              }
+                            }}
+                            className="text-[10px] text-blue-500 hover:text-blue-400 font-bold lowercase flex items-center gap-1 cursor-pointer"
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>Auto Detect</span>
+                          </button>
+                        )}
                       </label>
                       <input
                         type="text"

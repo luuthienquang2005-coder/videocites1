@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import { 
   Play, Pause, Volume2, VolumeX, Maximize2, Minimize2, 
-  ShieldAlert, Settings, SquareStack, Check, Tv, ExternalLink
+  ShieldAlert, Settings, SquareStack, Check, Tv
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Logo from "./Logo";
@@ -38,9 +38,10 @@ export default function VideoPlayer({
   const [volume, setVolume] = useState(() => {
     try {
       const saved = localStorage.getItem("videocites-volume");
-      return saved ? parseFloat(saved) : 0.8;
+      const val = saved ? parseFloat(saved) : 0.85;
+      return val <= 0 ? 0.85 : val; // Ensure unmuted by default
     } catch {
-      return 0.8;
+      return 0.85;
     }
   });
   const [isMuted, setIsMuted] = useState(false);
@@ -333,30 +334,25 @@ export default function VideoPlayer({
 
       {/* RENDER EMBED (YouTube, Vimeo, or generic iframe) */}
       {isEmbed ? (
-        <div className="relative w-full h-full bg-black">
+        <div className="relative w-full h-full bg-black overflow-hidden group/embed">
           <iframe
             src={parsedSource.embedUrl}
             title="Video Player"
-            className="w-full h-full border-0"
+            className={`w-full h-full border-0 ${
+              parsedSource.type === "vimeo" 
+                ? "transform scale-[1.035] origin-center" 
+                : ""
+            }`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           />
-          {/* Quick source badge at top-right for embeds */}
-          <div className="absolute top-3 right-3 pointer-events-auto z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-mono text-neutral-300 opacity-70 hover:opacity-100 transition-opacity">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="capitalize">{parsedSource.type} Player</span>
-            {parsedSource.src && (
-              <a
-                href={parsedSource.src}
-                target="_blank"
-                rel="noreferrer"
-                className="ml-1 text-blue-400 hover:text-blue-300 inline-flex items-center"
-                title="Mở liên kết gốc"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
+          {/* Subtle bottom-right mask to hide Vimeo logo on basic tier players */}
+          {parsedSource.type === "vimeo" && (
+            <div 
+              className="absolute bottom-0 right-0 w-24 h-12 pointer-events-none bg-gradient-to-tl from-black/85 via-black/40 to-transparent z-10"
+              aria-hidden="true"
+            />
+          )}
         </div>
       ) : (
         /* RENDER DIRECT HTML5 VIDEO */
@@ -365,12 +361,19 @@ export default function VideoPlayer({
             ref={videoRef}
             src={src}
             poster={poster}
+            muted={false}
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             onClick={handlePlayPause}
             onWaiting={() => setIsLoading(true)}
             onPlaying={() => setIsLoading(false)}
-            onCanPlay={() => setIsLoading(false)}
+            onCanPlay={() => {
+              setIsLoading(false);
+              if (videoRef.current) {
+                videoRef.current.muted = false;
+                videoRef.current.volume = volume;
+              }
+            }}
             onCanPlayThrough={() => setIsLoading(false)}
             onLoadStart={() => setIsLoading(true)}
             onProgress={handleProgress}
