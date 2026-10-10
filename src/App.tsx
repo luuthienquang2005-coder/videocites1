@@ -105,26 +105,13 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     return safeStorage.getItem("videocites-is-admin") === "true";
   });
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    return (safeStorage.getItem("videocites-theme") as "dark" | "light") || "dark";
-  });
-
-  // Toggle theme class on document element
+  // Ensure document always has dark mode class and clean up any legacy theme storage
   useEffect(() => {
-    safeStorage.setItem("videocites-theme", theme);
+    safeStorage.removeItem("videocites-theme");
     const root = document.documentElement;
-    if (theme === "light") {
-      root.classList.add("light");
-      root.classList.remove("dark");
-    } else {
-      root.classList.add("dark");
-      root.classList.remove("light");
-    }
-  }, [theme]);
-
-  const handleToggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
+    root.classList.add("dark");
+    root.classList.remove("light");
+  }, []);
 
   // Handle popstate for browser navigation (back/forward buttons)
   useEffect(() => {
@@ -614,9 +601,7 @@ export default function App() {
   }, [currentView, activeVideo, activePhoto]);
 
   return (
-    <div className={`min-h-screen font-sans flex flex-col justify-between transition-colors duration-300 ${
-      theme === "light" ? "bg-slate-50 text-slate-800" : "bg-[#050505] text-[#E5E5E5]"
-    }`}>
+    <div className="min-h-screen font-sans flex flex-col justify-between bg-[#050505] text-[#E5E5E5]">
       
       {/* 1. Header Navigation Bar */}
       <Navbar 
@@ -624,8 +609,6 @@ export default function App() {
         onNavigate={(view) => navigateTo(view)} 
         isAdmin={isAdmin}
         onLogout={handleLogout}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
       />
 
       {/* 2. Main Page Renderings */}
@@ -708,11 +691,9 @@ export default function App() {
         {currentView === "contact" && <ContactPage />}
       </main>
 
-      {/* 3. Mega Footer with theme control */}
+      {/* 3. Mega Footer */}
       <MegaFooter 
         onNavigate={(view) => navigateTo(view)} 
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
       />
 
     </div>
